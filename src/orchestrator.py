@@ -28,7 +28,7 @@ class CategoryAgent:
                 # Add delay to respect 15 RPM limit
                 response = await asyncio.to_thread(
                     self.client.models.generate_content,
-                    model='gemini-2.0-flash',
+                    model='gemini-flash-latest',
                     contents=prompt
                 )
                 return response.text
