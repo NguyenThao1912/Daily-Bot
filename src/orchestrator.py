@@ -1,5 +1,6 @@
 import asyncio
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from datetime import datetime
 from typing import List, Dict
 
@@ -8,8 +9,8 @@ class CategoryAgent:
         self.name = name
         self.api_key = api_key
         self.system_prompt = system_prompt
-        genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # New SDK Client
+        self.client = genai.Client(api_key=self.api_key)
 
     async def generate_impact(self, user_context: str, raw_data: str) -> str:
         full_prompt = f"{self.system_prompt}\n\nUSER PROFILE:\n{user_context}\n\nRAW DATA:\n{raw_data}"
@@ -17,21 +18,25 @@ class CategoryAgent:
 
     async def safe_generate(self, prompt: str, max_retries=3) -> str:
         import time
-        from google.api_core import exceptions
+        from google.genai import errors
         
         for i in range(max_retries):
             try:
-                # Add delay to respect 15 RPM limit (4s per call safe for sequential, 
-                # but for parallel execution in orchestrator we rely on semaphore or just simple logic)
-                # Since orchestrator uses asyncio.gather, we should stagger or limit concurrency.
-                # For now, strict 4s delay if we are hitting limits, but let's try just exception handling first 
-                # + a small preemptive delay if running in loop.
-                response = await asyncio.to_thread(self.model.generate_content, prompt)
+                # Add delay to respect 15 RPM limit
+                response = await asyncio.to_thread(
+                    self.client.models.generate_content,
+                    model='gemini-1.5-flash',
+                    contents=prompt
+                )
                 return response.text
-            except exceptions.ResourceExhausted:
-                wait_time = 10 * (i + 1)
-                print(f"⚠️ Rate Limit hit for {self.name}. Waiting {wait_time}s...")
-                await asyncio.sleep(wait_time)
+            except  errors.ClientError as e:
+                # Check for 429 in message or status code equivalent (SDK specific)
+                if "429" in str(e) or "ResourceExhausted" in str(e):
+                    wait_time = 10 * (i + 1)
+                    print(f"⚠️ Rate Limit hit for {self.name}. Waiting {wait_time}s...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    return f"Error in {self.name} agent: {str(e)}"
             except Exception as e:
                 return f"Error in {self.name} agent: {str(e)}"
         

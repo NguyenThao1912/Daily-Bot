@@ -1,5 +1,5 @@
 requests
-google-generativeai
+google-genai
 python-telegram-bot
 python-dotenv
 supabase

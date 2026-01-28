@@ -42,7 +42,7 @@ async def save_reminders(alerts):
 async def main():
     # 1. Setup Agents
     if not Config.TELEGRAM_BOT_TOKEN:
-        print("❌ Missing TELEGRAM_BOT_TOKEN")
+        print("❌ Missing TELEGRAM_BOT_TOKEN. Please check your .env file or GitHub Secrets!")
         return
 
     bot = Bot(token=Config.TELEGRAM_BOT_TOKEN)
