@@ -85,19 +85,7 @@ class DataService:
         vnindex_text = "N/A"
 
         # 2. DXY (US Dollar Index)
-        try:
-            dxy_ticker = yf.Ticker("DX-Y.NYB")
-            dxy_data = dxy_ticker.history(period="5d")
-            
-            if not dxy_data.empty:
-                dxy_now = dxy_data['Close'].iloc[-1]
-                dxy_prev = dxy_data['Close'].iloc[-2]
-                dxy_change = ((dxy_now - dxy_prev) / dxy_prev) * 100
-                dxy_text = f"{dxy_now:.2f} ({dxy_change:+.2f}%)"
-            else:
-                dxy_text = "N/A (No Data)"
-        except Exception as e:
-            print(f"⚠️ DXY Error: {e}")
+        dxy_text = "N/A (Disabled)"
 
         # 3. US Bond Yield (US10Y)
         try:
@@ -149,10 +137,10 @@ class DataService:
 
     @staticmethod
     async def get_all_data():
-        macro = DataService.get_macro_data()
+        # macro = DataService.get_macro_data()
         return {
             "finance": (
-                f"MACRO DATA:\n- DXY: {macro['DXY']}\n- US10Y-US2Y: {macro['Yield_Curve']}\n- VN-Index: {macro['VNIndex']}\n"
+                # f"MACRO DATA:\n- DXY: {macro['DXY']}\n- US10Y-US2Y: {macro['Yield_Curve']}\n- VN-Index: {macro['VNIndex']}\n"
                 "FPT: 135.2 (+0.5%), HPG: 25.4 (-1.2%), Vàng SJC: 89tr." + 
                 DataService.fetch_market()
             ),
