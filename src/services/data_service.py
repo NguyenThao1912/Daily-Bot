@@ -77,29 +77,13 @@ class DataService:
     def get_macro_data():
         import pandas_datareader.data as web
         import datetime
-        from vnstock import stock_historical_data
-        
-        try:
-            # 1. Lấy DXY (US Dollar Index)
-            dxy_ticker = yf.Ticker("DX-Y.NYB")
-            dxy_data = dxy_ticker.history(period="5d")
-            dxy_now = dxy_data['Close'].iloc[-1]
-            dxy_prev = dxy_data['Close'].iloc[-2]
-            dxy_change = ((dxy_now - dxy_prev) / dxy_prev) * 100
-        except Exception:
-            dxy_now, dxy_change = 0, 0
-
-        try:
-            # 2. Lấy Chênh lệch Lợi suất Trái phiếu (US10Y - US2Y)
-            start_date = datetime.datetime.now() - datetime.timedelta(days=10)
-            yield_curve = web.DataReader('T10Y2Y', 'fred', start_date)
-            spread_now = yield_curve.iloc[-1, 0]
-        except Exception:
-            spread_now = "N/A"
-
         try:
             # 3. Lấy VN-Index
-            df = stock_historical_data("VNINDEX", "2024-01-01", str(datetime.date.today()), "1D", "index")
+            from vnstock import Vnstock
+            stock = Vnstock().stock(symbol="VNINDEX", source='VCI')
+            df = stock.quote.history(start="2024-01-01", end=str(datetime.date.today()), resolution="1D")
+            
+            if not df.empty:
             if not df.empty:
                 vnindex_now = df['close'].iloc[-1]
                 vnindex_change = df['close'].iloc[-1] - df['close'].iloc[-2]
