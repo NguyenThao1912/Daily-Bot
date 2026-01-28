@@ -9,8 +9,11 @@ class CategoryAgent:
         self.name = name
         self.api_key = api_key
         self.system_prompt = system_prompt
-        # New SDK Client
-        self.client = genai.Client(api_key=self.api_key)
+        # New SDK Client - Force v1 API
+        self.client = genai.Client(
+            api_key=self.api_key,
+            http_options={'api_version': 'v1'}
+        )
 
     async def generate_impact(self, user_context: str, raw_data: str) -> str:
         full_prompt = f"{self.system_prompt}\n\nUSER PROFILE:\n{user_context}\n\nRAW DATA:\n{raw_data}"
@@ -25,7 +28,7 @@ class CategoryAgent:
                 # Add delay to respect 15 RPM limit
                 response = await asyncio.to_thread(
                     self.client.models.generate_content,
-                    model='gemini-1.5-flash',
+                    model='gemini-2.0-flash',
                     contents=prompt
                 )
                 return response.text
