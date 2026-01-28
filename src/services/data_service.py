@@ -84,7 +84,6 @@ class DataService:
             df = stock.quote.history(start="2024-01-01", end=str(datetime.date.today()), resolution="1D")
             
             if not df.empty:
-            if not df.empty:
                 vnindex_now = df['close'].iloc[-1]
                 vnindex_change = df['close'].iloc[-1] - df['close'].iloc[-2]
             else:
