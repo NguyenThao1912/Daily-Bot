@@ -1,0 +1,40 @@
+name: Run Morning Agent
+
+on:
+  schedule:
+    # 6h00 Sáng VN (UTC+7) = 23h00 UTC
+    # 18h00 Tối VN (UTC+7) = 11h00 UTC
+    - cron: '0 23,11 * * *'
+  workflow_dispatch: # Cho phép chạy thủ công
+
+jobs:
+  run-daily:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        cd agent-morning
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Agent
+      env:
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+        WEATHER_LOCATION: "Hanoi"
+      run: |
+        cd agent-morning
+        python main.py
