@@ -8,3 +8,4 @@ yfinance
 pandas_datareader
 vnstock
 pandas<2.0.0
+numpy<2
