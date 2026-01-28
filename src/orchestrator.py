@@ -29,7 +29,7 @@ class CategoryAgent:
     async def safe_generate(self, prompt: str, max_retries=3) -> str:
         # Cấu hình Model chuẩn
         # MODEL_NAME = 'gemini-2.0-flash-lite-preview-02-05' # Nếu muốn dùng bản 2.0 mới nhất
-        MODEL_NAME = 'gemini-2.0-flash' # Khuyên dùng bản này cho ổn định (Free Tier)
+        MODEL_NAME = 'gemini-2.5-flash-lite' # Khuyên dùng bản này cho ổn định (Free Tier)
 
         for i in range(max_retries):
             try:
