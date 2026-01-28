@@ -75,45 +75,61 @@ class DataService:
 
     @staticmethod
     def get_macro_data():
-        import pandas_datareader.data as web
+        import yfinance as yf
         import datetime
-        
+        from vnstock import Vnstock
+
+        # 1. Init defaults (Safe against NameError)
+        dxy_text = "N/A"
+        bond_text = "N/A"
+        vnindex_text = "N/A"
+
+        # 2. DXY (US Dollar Index)
         try:
-            # 1. Lấy DXY (US Dollar Index)
             dxy_ticker = yf.Ticker("DX-Y.NYB")
             dxy_data = dxy_ticker.history(period="5d")
-            dxy_now = dxy_data['Close'].iloc[-1]
-            dxy_prev = dxy_data['Close'].iloc[-2]
-            dxy_change = ((dxy_now - dxy_prev) / dxy_prev) * 100
-        except Exception:
-            dxy_now, dxy_change = 0, 0
+            
+            if not dxy_data.empty:
+                dxy_now = dxy_data['Close'].iloc[-1]
+                dxy_prev = dxy_data['Close'].iloc[-2]
+                dxy_change = ((dxy_now - dxy_prev) / dxy_prev) * 100
+                dxy_text = f"{dxy_now:.2f} ({dxy_change:+.2f}%)"
+            else:
+                dxy_text = "N/A (No Data)"
+        except Exception as e:
+            print(f"⚠️ DXY Error: {e}")
 
+        # 3. US Bond Yield (US10Y)
         try:
-            # 2. Lấy Chênh lệch Lợi suất Trái phiếu (US10Y - US2Y)
-            start_date = datetime.datetime.now() - datetime.timedelta(days=10)
-            yield_curve = web.DataReader('T10Y2Y', 'fred', start_date)
-            spread_now = yield_curve.iloc[-1, 0]
-        except Exception:
-            spread_now = "N/A"
+            # ^TNX = CBOE Interest Rate 10 Year T Note
+            # Divide by 10/100? No, ^TNX is usually raw index so 40 is 4.0%? 
+            # Actually ^TNX 42.50 = 4.25%. Yahoo Finance returns it directly.
+            bond = yf.Ticker("^TNX").history(period="5d")
+            if not bond.empty:
+                us10y = bond['Close'].iloc[-1]
+                bond_text = f"US10Y: {us10y:.2f}%"
+        except Exception as e:
+             print(f"⚠️ Bond Error: {e}")
 
+        # 4. VN-Index (Vnstock Class API)
         try:
-            # 3. Lấy VN-Index
-            from vnstock import Vnstock
             stock = Vnstock().stock(symbol="VNINDEX", source='VCI')
-            df = stock.quote.history(start="2024-01-01", end=str(datetime.date.today()), resolution="1D")
+            df = stock.quote.history(start=str(datetime.date.today() - datetime.timedelta(days=7)), end=str(datetime.date.today()), resolution="1D")
             
             if not df.empty:
                 vnindex_now = df['close'].iloc[-1]
-                vnindex_change = df['close'].iloc[-1] - df['close'].iloc[-2]
+                vnindex_prev = df['close'].iloc[-2]
+                vnindex_change = vnindex_now - vnindex_prev
+                vnindex_text = f"{vnindex_now:.0f} ({vnindex_change:+.0f} điểm)"
             else:
-                 vnindex_now, vnindex_change = 0, 0
-        except Exception:
-             vnindex_now, vnindex_change = 0, 0
+                vnindex_text = "N/A (Empty)"
+        except Exception as e:
+            print(f"⚠️ VNIndex Error: {e}")
 
         return {
-            "DXY": f"{dxy_now:.2f} ({dxy_change:+.2f}%)",
-            "Yield_Curve": spread_now,
-            "VNIndex": f"{vnindex_now:.2f} ({vnindex_change:+.2f} điểm)"
+            "DXY": dxy_text,
+            "Yield_Curve": bond_text,
+            "VNIndex": vnindex_text
         }
 
     @staticmethod
