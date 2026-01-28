@@ -22,7 +22,6 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd agent-morning
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
@@ -36,5 +35,4 @@ jobs:
         WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
         WEATHER_LOCATION: "Hanoi"
       run: |
-        cd agent-morning
         python main.py
