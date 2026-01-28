@@ -80,14 +80,10 @@ class DataService:
         from vnstock import Vnstock
 
         # 1. Init defaults (Safe against NameError)
-        dxy_text = "N/A"
         bond_text = "N/A"
         vnindex_text = "N/A"
 
-        # 2. DXY (US Dollar Index)
-        dxy_text = "N/A (Disabled)"
-
-        # 3. US Bond Yield (US10Y)
+        # 2. US Bond Yield (US10Y)
         try:
             # ^TNX = CBOE Interest Rate 10 Year T Note
             # Divide by 10/100? No, ^TNX is usually raw index so 40 is 4.0%? 
@@ -115,7 +111,6 @@ class DataService:
             print(f"⚠️ VNIndex Error: {e}")
 
         return {
-            "DXY": dxy_text,
             "Yield_Curve": bond_text,
             "VNIndex": vnindex_text
         }
@@ -137,10 +132,10 @@ class DataService:
 
     @staticmethod
     async def get_all_data():
-        # macro = DataService.get_macro_data()
+        macro = DataService.get_macro_data()
         return {
             "finance": (
-                # f"MACRO DATA:\n- DXY: {macro['DXY']}\n- US10Y-US2Y: {macro['Yield_Curve']}\n- VN-Index: {macro['VNIndex']}\n"
+                f"MACRO DATA:\n- US10Y: {macro['Yield_Curve']}\n- VN-Index: {macro['VNIndex']}\n"
                 "FPT: 135.2 (+0.5%), HPG: 25.4 (-1.2%), Vàng SJC: 89tr." + 
                 DataService.fetch_market()
             ),
