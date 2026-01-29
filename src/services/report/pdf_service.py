@@ -1,7 +1,7 @@
 import os
 import base64
-from xhtml2pdf import pisa
-from io import BytesIO
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
 
 class PDFService:
     @staticmethod
@@ -15,78 +15,122 @@ class PDFService:
             return None
 
     @staticmethod
+    def _ensure_font():
+        """Downloads Roboto font if missing to support Vietnamese."""
+        font_dir = "assets/fonts"
+        font_path = os.path.join(font_dir, "Roboto-Regular.ttf")
+        
+        if not os.path.exists(font_dir):
+            os.makedirs(font_dir)
+            
+        if not os.path.exists(font_path):
+            print("⬇️ Downloading Roboto font for Vietnamese support...")
+            url = "https://github.com/google/fonts/raw/main/ofl/roboto/Roboto-Regular.ttf"
+            try:
+                import requests
+                response = requests.get(url)
+                with open(font_path, "wb") as f:
+                    f.write(response.content)
+                print("✅ Font downloaded.")
+            except Exception as e:
+                print(f"⚠️ Font download failed: {e}. PDF might have font issues.")
+                return None
+        return os.path.abspath(font_path)
+
+    @staticmethod
     def generate_report(results, chart_map=None):
         """
-        Generates a PDF report from a list of HTML content chunks.
-        results: List of dicts, e.g. [{"category": "finance", "content": "<div>...</div>"}]
-        chart_map: Dict mapping category -> chart_path
+        Generates a PDF report using WeasyPrint.
         """
         if not chart_map:
             chart_map = {}
 
-        # 1. Master CSS Template
-        css = """
-        <style>
-            @page {
+        # Ensure Font
+        font_path = PDFService._ensure_font()
+        font_css = ""
+        if font_path:
+            font_css = f"""
+            @font-face {{
+                font-family: 'Roboto';
+                src: url('file://{font_path}');
+            }}
+            """
+
+        # 1. CSS Template (WeasyPrint supports standard CSS3 Paged Media)
+        css_string = f"""
+            {font_css}
+            @page {{
                 size: A4;
                 margin: 2cm;
-                @frame footer_frame {
-                    -pdf-frame-content: footerContent;
-                    bottom: 1cm;
-                    margin-left: 2cm;
-                    margin-right: 2cm;
-                    height: 1cm;
-                }
-            }
-            body { font-family: Helvetica, sans-serif; font-size: 12px; line-height: 1.5; }
-            .page-break { page-break-after: always; }
+                @bottom-center {{
+                    content: "Page " counter(page) " of " counter(pages);
+                    font-size: 10px;
+                    color: #777;
+                }}
+            }}
+            body {{ 
+                font-family: 'Roboto', Helvetica, sans-serif; 
+                font-size: 12px; 
+                line-height: 1.5; 
+            }}
             
-            h1 { color: #2c3e50; font-size: 24px; text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }
-            h2 { color: #e74c3c; font-size: 18px; margin-top: 20px; border-left: 5px solid #e74c3c; padding-left: 10px; }
+            h1 {{ color: #2c3e50; font-size: 24px; text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }}
+            h2 {{ color: #e74c3c; font-size: 18px; margin-top: 20px; border-left: 5px solid #e74c3c; padding-left: 10px; }}
             
-            .card { border: 1px solid #ddd; background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
-            .item-title { font-weight: bold; font-size: 14px; color: #34495e; margin-bottom: 10px; }
+            .card {{ border: 1px solid #ddd; background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px; break-inside: avoid; }}
+            .item-title {{ font-weight: bold; font-size: 14px; color: #34495e; margin-bottom: 10px; }}
             
-            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
-            th { background-color: #eee; }
+            table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; }}
+            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }}
+            th {{ background-color: #eee; }}
             
-            .alert { background-color: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-top: 5px; font-style: italic; }
-            .motto { text-align: center; font-style: italic; color: #555; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }
+            .alert {{ background-color: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-top: 5px; font-style: italic; }}
+            .motto {{ text-align: center; font-style: italic; color: #555; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
             
-            .chart-container { text-align: center; margin: 20px 0; }
-            .chart-img { max-width: 100%; height: auto; border: 1px solid #ddd; padding: 5px; }
-        </style>
+            .chart-container {{ text-align: center; margin: 20px 0; break-inside: avoid; }}
+            .chart-img {{ max-width: 100%; height: auto; border: 1px solid #ddd; padding: 5px; }}
+            
+            .page-break {{ break-after: always; }}
+            .category-section {{ break-after: always; }}
         """
 
         # 2. Build HTML Content
-        html_body = "<body>"
-        
-        # Title Page
-        html_body += """
-        <div style="text-align: center; padding-top: 5cm;">
-            <h1>BÁO CÁO CHIẾN LƯỢC NGÀY</h1>
-            <p>Generated by Daily-Bot AI</p>
-            <p>Date: %s</p>
-        </div>
-        <div class="page-break"></div>
-        """ % (import_datetime_now())
+        from datetime import datetime
+        import pytz
+        vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+        now_str = datetime.now(vn_tz).strftime('%d/%m/%Y %H:%M')
+
+        html_body = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Daily Report</title>
+        </head>
+        <body>
+            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; break-after: always;">
+                <h1 style="font-size: 48px; margin-bottom: 20px; border: none;">BÁO CÁO CHIẾN LƯỢC</h1>
+                <h2 style="font-size: 32px; color: #555; border: none; margin-top: 0;">NGÀY {now_str.split(' ')[0]}</h2>
+                <div style="margin-top: 50px; font-size: 14px; color: #888;">
+                    <p>Generated by <b>Daily-Bot AI</b></p>
+                    <p>Time: {now_str.split(' ')[1]}</p>
+                </div>
+            </div>
+        """
 
         # Category Pages
-        # Order priorities if needed, or stick to list order
         for res in results:
             cat = res.get("category", "unknown").upper()
             content = res.get("content", "")
             
-            # Start New Page per Category
+            # Start New Section
             html_body += f"""
             <div class="category-section">
                 <h1>{cat} REPORT</h1>
                 {content}
-            </div>
             """
             
-            # Embed Chart if available for this category
+            # Embed Chart
             c_path = chart_map.get(res.get("category"))
             if c_path and os.path.exists(c_path):
                 b64_img = PDFService._read_file_as_base64(c_path)
@@ -98,18 +142,12 @@ class PDFService:
                     </div>
                     """
             
-            # Page Break after specific sections or all
-            html_body += '<div class="page-break"></div>'
+            html_body += "</div>" # Close category-section
 
-        # Close Body
         html_body += """
-        <div id="footerContent" style="text-align:center; font-size: 10px;">
-            Confidential Report - Internal Use Only
-        </div>
         </body>
+        </html>
         """
-
-        full_html = css + html_body
 
         # 3. Generate PDF
         output_dir = "output"
@@ -119,20 +157,13 @@ class PDFService:
         pdf_path = os.path.join(output_dir, "Daily_Report.pdf")
         
         try:
-            with open(pdf_path, "wb") as pdf_file:
-                pisa_status = pisa.CreatePDF(full_html, dest=pdf_file)
-                
-            if pisa_status.err:
-                print(f"❌ PDF Generation Error: {pisa_status.err}")
-                return None
-                
+            print("⏳ Rendering PDF with WeasyPrint...")
+            HTML(string=html_body, base_url=".").write_pdf(
+                pdf_path, 
+                stylesheets=[CSS(string=css_string)]
+            )
             return pdf_path
         except Exception as e:
              print(f"❌ PDF Write Error: {e}")
              return None
 
-def import_datetime_now():
-    from datetime import datetime
-    import pytz
-    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    return datetime.now(vn_tz).strftime('%d/%m/%Y %H:%M')

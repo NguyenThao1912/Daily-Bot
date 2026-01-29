@@ -70,4 +70,4 @@ websockets==15.0.1
 yarl==1.22.0
 yfinance==1.1.0
 matplotlib==3.10.0
-xhtml2pdf==0.2.16
+weasyprint==63.1
