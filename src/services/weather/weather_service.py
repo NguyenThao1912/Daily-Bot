@@ -18,11 +18,14 @@ class WeatherService:
     @staticmethod
     def _generate_weather_chart(weather_data):
         try:
-            import matplotlib.pyplot as plt
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            
             # Extract hourly data
             hours = weather_data['forecast']['forecastday'][0]['hour']
             times = [h['time'].split(' ')[1] for h in hours] # HH:MM
             temps = [h['temp_c'] for h in hours]
+            humidities = [h['humidity'] for h in hours]
             
             # Create Output Dir
             output_dir = "output"
@@ -31,23 +34,34 @@ class WeatherService:
             
             chart_path = os.path.join(output_dir, "weather_chart.png")
 
-            # Plotting
-            plt.figure(figsize=(10, 5))
-            plt.plot(times, temps, marker='o', linestyle='-', color='orange', label='Nhiệt độ (°C)')
+            # Plotting Combo Chart OO
+            fig = Figure(figsize=(12, 6))
+            canvas = FigureCanvas(fig)
+            ax1 = fig.add_subplot(111)
+
+            # Temp on Left (Ax1)
+            color = '#e74c3c' # Red
+            ax1.set_xlabel('Giờ')
+            ax1.set_ylabel('Nhiệt độ (°C)', color=color)
+            ax1.plot(times, temps, color=color, marker='o', linewidth=2, label='Nhiệt độ')
+            ax1.tick_params(axis='y', labelcolor=color)
+            ax1.grid(True, linestyle='--', alpha=0.5)
+
+            # Humidity on Right (Ax2)
+            ax2 = ax1.twinx()
+            color = '#3498db'
+            ax2.set_ylabel('Độ ẩm (%)', color=color)
+            ax2.fill_between(times, humidities, color=color, alpha=0.2, label='Độ ẩm')
+            # ax2.bar... removed or kept simple
+            ax2.tick_params(axis='y', labelcolor=color)
             
-            # Labeling
+            # Title
             date_str = weather_data['forecast']['forecastday'][0]['date']
             location_name = weather_data['location']['name']
-            plt.title(f"Dự báo nhiệt độ {location_name} ngày {date_str}")
-            plt.xlabel("Thời gian (Giờ)")
-            plt.ylabel("Nhiệt độ (°C)")
-            plt.xticks(rotation=45)
-            plt.grid(True, linestyle='--', alpha=0.7)
-            plt.legend()
-            plt.tight_layout()
+            ax1.set_title(f"Diễn biến Thời tiết {location_name} - {date_str} (Nhiệt độ & Độ ẩm)")
             
-            plt.savefig(chart_path)
-            plt.close()
+            fig.tight_layout()
+            canvas.print_png(chart_path)
             return chart_path
         except Exception as e:
             print(f"⚠️ Chart Error: {e}")

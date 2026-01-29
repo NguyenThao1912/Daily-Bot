@@ -56,49 +56,166 @@ class PDFService:
             }}
             """
 
-        # 1. CSS Template (WeasyPrint supports standard CSS3 Paged Media)
+        # 1. Premium CSS Template
         css_string = f"""
             {font_css}
             @page {{
                 size: A4;
                 margin: 2cm;
-                @bottom-center {{
+                @bottom-right {{
                     content: "Page " counter(page) " of " counter(pages);
-                    font-size: 10px;
-                    color: #777;
+                    font-size: 9pt;
+                    color: #999;
+                    font-family: 'Roboto';
+                }}
+                @bottom-left {{
+                    content: "Daily Strategy Report";
+                    font-size: 9pt;
+                    color: #999;
+                    font-family: 'Roboto';
                 }}
             }}
+            
+            /* --- RESET & GLOBAL --- */
+            * {{
+                box-sizing: border-box;
+            }}
+
             body {{ 
-                font-family: 'Roboto', Helvetica, sans-serif; 
-                font-size: 12px; 
-                line-height: 1.5; 
+                font-family: 'Roboto', sans-serif; 
+                font-size: 11pt; 
+                line-height: 1.6; 
+                color: #333;
+                width: 100%;
             }}
             
-            h1 {{ color: #2c3e50; font-size: 24px; text-align: center; border-bottom: 2px solid #2c3e50; padding-bottom: 10px; }}
-            h2 {{ color: #e74c3c; font-size: 18px; margin-top: 20px; border-left: 5px solid #e74c3c; padding-left: 10px; }}
+            /* --- TYPOGRAPHY --- */
+            h1 {{ 
+                color: #1a252f; 
+                font-size: 24pt; 
+                text-transform: uppercase; 
+                letter-spacing: 2px;
+                border-bottom: 3px solid #3498db; 
+                padding-bottom: 15px; 
+                margin-top: 0;
+            }}
             
-            .card {{ border: 1px solid #ddd; background-color: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 5px; break-inside: avoid; }}
-            .item-title {{ font-weight: bold; font-size: 14px; color: #34495e; margin-bottom: 10px; }}
+            h2 {{ 
+                color: #2980b9; 
+                font-size: 16pt; 
+                margin-top: 30px; 
+                margin-bottom: 15px;
+                font-weight: 700;
+            }}
             
-            table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; }}
-            th, td {{ border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }}
-            th {{ background-color: #eee; }}
+            /* --- COMPONENTS --- */
+            .category-section {{ 
+                break-after: always; 
+                width: 100%;
+            }}
+
+            /* Modern Card Style */
+            .card {{ 
+                background-color: #fff; 
+                border: 1px solid #e0e0e0;
+                border-left: 5px solid #3498db; /* Blue Accent */
+                border-radius: 4px;
+                padding: 20px; 
+                margin-bottom: 25px; 
+                break-inside: avoid;
+                box-decoration-break: clone;
+                width: 100%;
+            }}
             
-            .alert {{ background-color: #fff3cd; color: #856404; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-top: 5px; font-style: italic; }}
-            .motto {{ text-align: center; font-style: italic; color: #555; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px; }}
+            .item-title {{ 
+                font-size: 13pt; 
+                font-weight: bold; 
+                color: #2c3e50; 
+                margin-bottom: 15px;
+                display: block;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 8px;
+            }}
             
-            .chart-container {{ text-align: center; margin: 20px 0; break-inside: avoid; }}
-            .chart-img {{ max-width: 100%; height: auto; border: 1px solid #ddd; padding: 5px; }}
+            /* Professional Table */
+            table {{ 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-bottom: 15px; 
+                font-size: 10pt;
+                table-layout: fixed; /* Fix width to page */
+            }}
             
-            .page-break {{ break-after: always; }}
-            .category-section {{ break-after: always; }}
+            th {{ 
+                background-color: #34495e; 
+                color: #fff; 
+                padding: 10px 12px; 
+                text-align: left; 
+                font-weight: 600;
+                border: 1px solid #34495e;
+                word-wrap: break-word; /* Prevent overflow */
+            }}
+            
+            td {{ 
+                padding: 10px 12px; 
+                border: 1px solid #e0e0e0; 
+                vertical-align: top;
+                word-wrap: break-word; /* Prevent overflow */
+                overflow-wrap: break-word;
+            }}
+            
+            tr:nth-child(even) {{
+                background-color: #f8f9fa;
+            }}
+            
+            /* Alert Box */
+            .alert {{ 
+                background-color: #fff8e1; 
+                color: #856404; 
+                padding: 12px; 
+                border: 1px solid #ffeeba; 
+                border-radius: 4px; 
+                margin-top: 10px; 
+                font-size: 10pt;
+            }}
+            
+            /* Motto Footer */
+            .motto {{ 
+                text-align: center; 
+                font-style: italic; 
+                color: #7f8c8d; 
+                margin-top: 50px; 
+                padding-top: 20px; 
+                border-top: 1px solid #eee; 
+            }}
+            
+            .chart-container {{ 
+                text-align: center; 
+                margin: 30px 0; 
+                break-inside: avoid; 
+                padding: 10px;
+                background: #fff;
+                border: 1px solid #ddd;
+            }}
+            .chart-img {{ 
+                max-width: 100%; 
+                height: auto; 
+            }}
+            
+            ul {{ margin: 0; padding-left: 20px; }}
+            li {{ margin-bottom: 5px; }}
+            
+            /* Links */
+            a {{ color: #2980b9; text-decoration: none; }}
         """
 
         # 2. Build HTML Content
         from datetime import datetime
         import pytz
         vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-        now_str = datetime.now(vn_tz).strftime('%d/%m/%Y %H:%M')
+        now_dt = datetime.now(vn_tz)
+        date_str = now_dt.strftime('%d/%m/%Y')
+        time_str = now_dt.strftime('%H:%M')
 
         html_body = f"""
         <!DOCTYPE html>
@@ -108,12 +225,31 @@ class PDFService:
             <title>Daily Report</title>
         </head>
         <body>
-            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; text-align: center; break-after: always;">
-                <h1 style="font-size: 48px; margin-bottom: 20px; border: none;">BÁO CÁO CHIẾN LƯỢC</h1>
-                <h2 style="font-size: 32px; color: #555; border: none; margin-top: 0;">NGÀY {now_str.split(' ')[0]}</h2>
-                <div style="margin-top: 50px; font-size: 14px; color: #888;">
-                    <p>Generated by <b>Daily-Bot AI</b></p>
-                    <p>Time: {now_str.split(' ')[1]}</p>
+            <!-- TITLE PAGE -->
+            <div style="
+                height: 90vh; 
+                display: flex; 
+                flex-direction: column; 
+                justify-content: center; 
+                align-items: center; 
+                text-align: center; 
+                border: 2px solid #34495e;
+                padding: 40px;
+                margin-top: 20px;
+                break-after: always;
+            ">
+                <div style="font-size: 60px; margin-bottom: 20px;">📊</div>
+                <h1 style="font-size: 28pt; border: none; margin-bottom: 10px; color: #2c3e50;">BÁO CÁO HÀNG NGÀY</h1>
+                <h2 style="font-size: 16pt; border: none; color: #7f8c8d; font-weight: 300; margin-top: 0;">DAILY INTELLIGENCE BRIEFING</h2>
+                
+                <div style="margin-top: 60px; border-top: 2px solid #3498db; display: inline-block; padding-top: 20px; width: 50%;">
+                    <h3 style="font-size: 24pt; margin: 0; color: #2c3e50;">{date_str}</h3>
+                    <p style="color: #95a5a6; margin-top: 5px;">Cập nhật lúc: {time_str}</p>
+                </div>
+
+                <div style="margin-top: auto; color: #bdc3c7; font-size: 10pt;">
+                    PREPARED BY <b>DAILY-BOT AI</b><br>
+                    INTERNAL USE ONLY
                 </div>
             </div>
         """
@@ -154,7 +290,9 @@ class PDFService:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
             
-        pdf_path = os.path.join(output_dir, "Daily_Report.pdf")
+        # Filename with Date: Daily_Report_YYYY-MM-DD.pdf
+        file_date = now_dt.strftime('%Y-%m-%d')
+        pdf_path = os.path.join(output_dir, f"Daily_Report_{file_date}.pdf")
         
         try:
             print("⏳ Rendering PDF with WeasyPrint...")

@@ -50,9 +50,9 @@ class StockService:
                 # Handle symbol cleanup (Daily-Bot's config or user input might have suffixes)
                 target = symbol.replace("^", "").split(".")[0] 
                 
-                # Special mapping for CafeF: VNINDEX -> VNI
-                if target.upper() in ["VNINDEX", "VN-INDEX"]:
-                    target = "VNI"
+                # Special mapping for CafeF: VNINDEX -> VNI (REMOVED - User confirmed VNINDEX is correct)
+                # if target.upper() in ["VNINDEX", "VN-INDEX"]:
+                #     target = "VNI"
                 
                 node = StockService._fetch_cafef_stock_snapshot(target)
                 if not node:

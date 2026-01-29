@@ -42,20 +42,23 @@ class BankingService:
             return None
 
     @staticmethod
-    def _generate_rate_chart(rates_data):
+    def _generate_rate_chart(chart_data):
+        """
+        chart_data: List of tuples (BankCode, Rate6M, Rate12M)
+        """
         try:
-            import matplotlib.pyplot as plt
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            import numpy as np
             
             # Extract data
-            banks = []
-            values = []
+            banks = [x[0] for x in chart_data]
+            rates_6m = [x[1] for x in chart_data]
+            rates_12m = [x[2] for x in chart_data]
             
-            # Sort by rate desc: (BankCode, RateFloat)
-            sorted_rates = sorted(rates_data, key=lambda x: x[1], reverse=True)
-            
-            for bank, rate in sorted_rates:
-                banks.append(bank)
-                values.append(rate)
+            # Setup Grouped Bar
+            x = np.arange(len(banks))
+            width = 0.35
             
             # Create Output Dir
             output_dir = "output"
@@ -63,27 +66,41 @@ class BankingService:
                 os.makedirs(output_dir)
             chart_path = os.path.join(output_dir, "interest_rate_chart.png")
 
-            # Plot properties
-            plt.figure(figsize=(10, 5))
-            bars = plt.bar(banks, values, color='#4CAF50') # Green theme
-            plt.ylabel('Lãi suất 12 Tháng (%)')
-            plt.title('Lãi suất Tiết kiệm Ngân hàng (12M)')
-            plt.ylim(0, max(values) + 1)
+            # Plotting OO
+            fig = Figure(figsize=(12, 6))
+            canvas = FigureCanvas(fig)
+            ax = fig.add_subplot(111)
             
-            # Add value labels
-            for bar in bars:
-                height = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2., height,
-                        f'{height}%',
-                        ha='center', va='bottom', fontweight='bold')
+            rects1 = ax.bar(x - width/2, rates_6m, width, label='6 Tháng', color='#3498db')
+            rects2 = ax.bar(x + width/2, rates_12m, width, label='12 Tháng', color='#2ecc71')
 
-            plt.tight_layout()
-            plt.savefig(chart_path)
-            plt.close()
+            ax.set_ylabel('Lãi suất (%)')
+            ax.set_title('So sánh Lãi suất Tiết kiệm (6M vs 12M)')
+            ax.set_xticks(x)
+            ax.set_xticklabels(banks)
+            ax.legend()
+            ax.grid(True, axis='y', linestyle='--', alpha=0.5)
+            
+            # Add labels
+            def autolabel(rects):
+                for rect in rects:
+                    height = rect.get_height()
+                    ax.annotate(f'{height}%',
+                                xy=(rect.get_x() + rect.get_width() / 2, height),
+                                xytext=(0, 3),  # 3 points vertical offset
+                                textcoords="offset points",
+                                ha='center', va='bottom', fontsize=8)
+
+            autolabel(rects1)
+            autolabel(rects2)
+
+            fig.tight_layout()
+            canvas.print_png(chart_path)
             return chart_path
         except Exception as e:
             print(f"⚠️ Rate Chart Error: {e}")
             return None
+
 
     @staticmethod
     def fetch_banking_rates():
@@ -137,8 +154,10 @@ class BankingService:
                          lines.append(f"{code}: 6M({r6}%) - 12M({r12}%)")
                          
                          try: 
-                             if r12 and r12 != 'N/A':
-                                chart_data.append((code, float(r12)))
+                             r12_val = float(r12) if r12 != 'N/A' else 0
+                             r6_val = float(r6) if r6 != 'N/A' else 0
+                             if r12_val > 0:
+                                chart_data.append((code, r6_val, r12_val))
                          except: pass
                  
                  int_text = "\n".join(lines)

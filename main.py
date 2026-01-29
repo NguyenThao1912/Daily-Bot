@@ -1,4 +1,6 @@
 import os
+import matplotlib
+matplotlib.use('Agg') # Force non-interactive backend to prevent recursion/thread errors
 import asyncio
 import shutil
 import pytz
