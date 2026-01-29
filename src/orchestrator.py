@@ -73,22 +73,23 @@ class Orchestrator:
         results = []
         processed_categories = set()
         
-        print(f"🚀 Bắt đầu chạy AI Pipeline (Chế độ Tuần tự - Safe Mode)...")
+        print(f"🚀 Bắt đầu chạy AI Pipeline (Chế độ Song Song - Turbo Mode)...")
         
-        for agent in self.agents:
+        # Helper function for individual agent task
+        async def process_agent(agent):
             raw_data = category_data.get(agent.name, "Không có dữ liệu mới.")
             processed_categories.add(agent.name)
-            
-            # 1. Thực thi Agent
-            print(f"🤖 Đang chạy: {agent.name}...")
-            res = await agent.generate_impact(user_context, raw_data)
-            results.append({"category": agent.name, "content": res})
-            
-            # 2. Nghỉ giữa các hiệp (Quan trọng cho Free Tier)
-            # Gemini Flash giới hạn 15 RPM (4s/request). 
-            # Nghỉ 4s là an toàn tuyệt đối.
-            print(f"💤 Nghỉ 4s...")
-            await asyncio.sleep(4)
+            print(f"🤖 Start: {agent.name}...")
+            content = await agent.generate_impact(user_context, raw_data)
+            print(f"✅ Finish: {agent.name}")
+            return {"category": agent.name, "content": content}
+
+        # Create tasks for all agents
+        tasks = [process_agent(agent) for agent in self.agents]
+        
+        # Run concurrently
+        # Note: CategoryAgent.safe_generate already handles Rate Limits (429) with retries
+        results = await asyncio.gather(*tasks)
         
         # 3. Thêm dữ liệu thô cho các danh mục không có Agent
         for category, raw_data in category_data.items():
