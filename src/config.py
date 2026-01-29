@@ -32,4 +32,3 @@ class Config:
     # Paths
     PROMPT_BASE = os.path.join(os.path.dirname(__file__), "../prompts/base.txt")
     PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "../prompts/agents")
-    PROMPT_USER = os.path.join(os.path.dirname(__file__), "../prompts/user_context.txt")

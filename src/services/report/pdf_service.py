@@ -140,7 +140,6 @@ class PDFService:
                 padding: 15px 20px; 
                 margin-bottom: 25px; 
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                break-inside: avoid; /* Avoid breaking card across pages */
             }}
             
             .item-title {{ 

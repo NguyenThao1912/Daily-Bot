@@ -25,17 +25,29 @@ class BankingService:
     @staticmethod
     def _fetch_raw_exchange_rates():
         try:
-            # CafeF Exchange Rates
+            from datetime import timedelta
+            # Try Today, then Yesterday (if today is early morning and no data)
             now = datetime.now()
-            date_str = now.strftime("%d/%m/%Y")
-            url = f"https://cafef.vn/du-lieu//ajax/exchangerate/ajaxratecurrency.ashx?time={date_str}"
+            dates_to_try = [now, now - timedelta(days=1)]
+            
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=10)
-            if res.status_code == 200:
-                return res.json()
+
+            for d in dates_to_try:
+                date_str = d.strftime("%d/%m/%Y")
+                url = f"https://cafef.vn/du-lieu/ajax/exchangerate/ajaxratecurrency.ashx?time={date_str}"
+                
+                try:
+                    res = requests.get(url, headers=headers, timeout=10)
+                    if res.status_code == 200:
+                        data = res.json()
+                        if data and isinstance(data, list) and len(data) > 0:
+                            return data
+                except:
+                    continue
+            
             return None
         except Exception as e:
             print(f"⚠️ Raw Exchange Fetch Error: {e}")
