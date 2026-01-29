@@ -12,7 +12,7 @@ class MarketService:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=10, verify=False)
+            res = requests.get(url, headers=headers, timeout=90, verify=False)
             if res.status_code == 200:
                 return res.json()
             return None
@@ -29,7 +29,7 @@ class MarketService:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=10, verify=False)
+            res = requests.get(url, headers=headers, timeout=90, verify=False)
             if res.status_code == 200:
                 return res.json()
             return None
@@ -105,6 +105,104 @@ class MarketService:
             return None
 
     @staticmethod
+    def _fetch_cafef_market_breadth():
+        try:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # Fetch for HOSE
+            url = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxdorongthitruong.ashx?centerID=HOSE"
+            headers = {
+               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+               "Referer": "https://cafef.vn/"
+            }
+            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            if res.status_code == 200:
+                return res.json()
+            return None
+        except Exception as e:
+             print(f"⚠️ CafeF Breadth Error: {e}")
+             return None
+
+    @staticmethod
+    def _fetch_cafef_exchange_rates():
+        try:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            url = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxtygia.ashx"
+            headers = {
+               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+               "Referer": "https://cafef.vn/"
+            }
+            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            if res.status_code == 200:
+                data = res.json()
+                if data and data.get('Success'):
+                    return data.get('Data', [])
+            return []
+        except Exception as e:
+             print(f"⚠️ CafeF Exchange Rate Error: {e}")
+             return []
+
+    @staticmethod
+    def _fetch_cafef_prop_trading():
+        try:
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            headers = {
+               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+               "Referer": "https://cafef.vn/"
+            }
+            
+            # Fetch Buy Value
+            url_buy = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxgiaodichtudoanh.ashx?type=BUYVALUE"
+            res_buy = requests.get(url_buy, headers=headers, timeout=10, verify=False)
+            buy_data = res_buy.json() if res_buy.status_code == 200 else []
+            
+            # Fetch Sell Value
+            url_sell = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxgiaodichtudoanh.ashx?type=SELLVALUE"
+            res_sell = requests.get(url_sell, headers=headers, timeout=10, verify=False)
+            sell_data = res_sell.json() if res_sell.status_code == 200 else []
+            
+            # Helper to map
+            def map_data(data_list):
+                d = {}
+                if not isinstance(data_list, list): return d
+                for item in data_list:
+                    # CafeF usually returns 'StockCode' and 'Value'
+                    sym = item.get('StockCode') or item.get('Symbol')
+                    val = item.get('Value') or item.get('TotalValue') or 0
+                    if sym: d[sym] = float(val)
+                return d
+
+            buy_map = map_data(buy_data)
+            sell_map = map_data(sell_data)
+            
+            all_syms = set(buy_map.keys()) | set(sell_map.keys())
+            net_flow = []
+            
+            total_buy_val = 0
+            total_sell_val = 0
+            
+            for sym in all_syms:
+                b = buy_map.get(sym, 0)
+                s = sell_map.get(sym, 0)
+                total_buy_val += b
+                total_sell_val += s
+                
+                net = b - s
+                if net != 0:
+                     net_flow.append((sym, net))
+            
+            net_flow.sort(key=lambda x: x[1], reverse=True)
+            
+            top_buy = net_flow[:5]
+            top_sell = net_flow[-5:]
+            top_sell.sort(key=lambda x: x[1]) # Sort asc (most negative first)
+            
+            return top_buy, top_sell, total_buy_val, total_sell_val
+            
+        except Exception as e:
+             print(f"⚠️ Prop Trading Error: {e}")
+             return [], [], 0, 0
+
+    @staticmethod
     def _fetch_cafef_leaders():
         try:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -122,7 +220,7 @@ class MarketService:
                   "Sec-Fetch-Site": "same-site"
             }
             
-            res = requests.get(url, headers=headers, timeout=10, verify=False)
+            res = requests.get(url, headers=headers, timeout=90, verify=False)
             
             if res.status_code != 200:
                   print(f"Lỗi HTTP: {res.status_code}")
@@ -447,7 +545,31 @@ class MarketService:
                         lines.append(f"- {name}: {price}")
                         count += 1
         
-        # 3. Market Leaders
+        # 3. Market Breadth (NEW)
+        breadth_data = MarketService._fetch_cafef_market_breadth()
+        lines.append("\n[ĐỘ RỘNG THỊ TRƯỜNG (HOSE)]")
+        if breadth_data:
+            # Typically returns list of dicts with time? Or single snapshot?
+            # It seems to be a list where last item is latest.
+            if isinstance(breadth_data, list) and len(breadth_data) > 0:
+                latest = breadth_data[-1]
+                # Keys: 'Time', 'Tang', 'Giam', 'ThamChieu', 'Tran', 'San'
+                up = latest.get('Tang', 0)
+                down = latest.get('Giam', 0)
+                ref = latest.get('ThamChieu', 0)
+                ceil = latest.get('Tran', 0)
+                floor = latest.get('San', 0)
+                
+                total = up + down + ref
+                if total > 0:
+                    ratio = (up / total) * 100
+                    status = "🟢 Tích cực" if ratio > 55 else "🔴 Tiêu cực" if ratio < 45 else "🟡 Cân bằng"
+                    lines.append(f"Tăng: {up} (Trần {ceil}) | Giảm: {down} (Sàn {floor}) | TC: {ref}")
+                    lines.append(f"Tỷ lệ Tăng: {ratio:.1f}% => {status}")
+                else:
+                    lines.append("Dữ liệu trống.")
+        
+        # 4. Market Leaders
         lines.append("\n[DẪN DẮT VN-INDEX - ALL]")
         leaders = MarketService._fetch_cafef_leaders()
         if leaders and isinstance(leaders, list):
@@ -462,6 +584,38 @@ class MarketService:
                  if sym: l_strs.append(sym)
              if l_strs:
                  lines.append(", ".join(l_strs))
+
+        # 5. Global Exchange Rates (NEW)
+        ex_rates = MarketService._fetch_cafef_exchange_rates()
+        if ex_rates:
+            lines.append("\n[TỶ GIÁ THẾ GIỚI]")
+            # Filter key pairs: USDEUR, USDJPY, USDCNY, GBPUSD, AUDUSD
+            key_pairs = ["USDEUR", "USDJPY", "USDCNY", "GBPUSD", "AUDUSD"]
+            for item in ex_rates:
+                code = item.get('Code')
+                if code in key_pairs:
+                    price = item.get('CurrentRate')
+                    change = item.get('ChangePercent')
+                    if price:
+                        lines.append(f"- {code}: {price} ({change})")
+
+        # 6. Proprietary Trading (NEW)
+        td_buy, td_sell, td_total_buy, td_total_sell = MarketService._fetch_cafef_prop_trading()
+        if td_buy or td_sell:
+             lines.append("\n[TỰ DOANH (HOSE)]")
+             net_val = td_total_buy - td_total_sell
+             status = "MUA RÒNG" if net_val > 0 else "BÁN RÒNG"
+             lines.append(f"Tổng: {status} {abs(net_val):,.0f} tỷ")
+             
+             if td_buy:
+                 lines.append("Mua ròng:")
+                 for sym, val in td_buy:
+                     if val > 0: lines.append(f"+ {sym}: {val:,.1f}")
+             
+             if td_sell:
+                 lines.append("Bán ròng:")
+                 for sym, val in td_sell:
+                     if val < 0: lines.append(f"- {sym}: {val:,.1f}")
         
         return {
             "text": "\n\n[MARKET DATA - CafeF]:\n" + "\n".join(lines),

@@ -126,6 +126,7 @@ class PDFService:
                 margin-top: 0;
                 margin-bottom: 30px;
                 text-align: right;
+                break-before: page; /* Always start new page */
             }}
 
             h2 {{ color: #e67e22; font-size: 14pt; margin-top: 20px; font-weight: 700; }}

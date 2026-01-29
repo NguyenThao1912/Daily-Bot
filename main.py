@@ -120,14 +120,26 @@ async def main():
     for name in agents_map.keys():
         api_key = Config.GEMINI_KEYS.get(name)
         if api_key:
+            # Locate Prompt
             prompt_path = os.path.join(Config.PROMPTS_DIR, f"{name}.txt")
-            try:
-                with open(prompt_path, "r", encoding="utf-8") as f:
-                    specific_prompt = f.read()
-            except FileNotFoundError:
-                print(f"⚠️ Specific prompt missing for {name}, using base only.")
-                specific_prompt = ""
+            prompt_folder_path = os.path.join(Config.PROMPTS_DIR, name, "prompt.txt")
             
+            specific_prompt = ""
+            if os.path.exists(prompt_path):
+                try:
+                    with open(prompt_path, "r", encoding="utf-8") as f:
+                        specific_prompt = f.read()
+                except Exception as e:
+                    print(f"⚠️ Read error for {name}.txt: {e}")
+            elif os.path.exists(prompt_folder_path):
+                try:
+                    with open(prompt_folder_path, "r", encoding="utf-8") as f:
+                        specific_prompt = f.read()
+                except Exception as e:
+                    print(f"⚠️ Read error for {name}/prompt.txt: {e}")
+            else:
+                 print(f"⚠️ Specific prompt missing for {name}, using base only.")
+
             full_prompt = f"{base_prompt}\n\n{specific_prompt}"
             orchestrator.add_agent(CategoryAgent(name, api_key, full_prompt))
         else:
