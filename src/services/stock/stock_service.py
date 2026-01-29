@@ -3,17 +3,29 @@ import urllib3
 from datetime import datetime
 from src.config import Config
 from src.services.watchlist_service import WatchlistService
+import pandas as pd
+import numpy as np
 
 class StockService:
     @staticmethod
     def _fetch_stock_history(symbol, page_size=300):
         try:
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             # Fetch more data for history (PageSize=300 for >200 days for MA200)
             url = f"https://cafef.vn/du-lieu/Ajax/PageNew/DataHistory/PriceHistory.ashx?Symbol={symbol}&StartDate=&EndDate=&PageIndex=1&PageSize={page_size}"
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Referer": "https://cafef.vn/"
+                "Connection": "keep-alive",
+                "Pragma": "no-cache",
+                "Cache-Control": "no-cache",
+                "Sec-Fetch-Dest": "empty",
+                "X-MicrosoftAjax": "Delta=true",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36",
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "Accept": "*/*",
+                "Origin": "https://s.cafef.vn",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-Mode": "cors",
+                "Referer": "https://s.cafef.vn/Lich-su-giao-dich-VNINDEX-1.chn",
+                "Accept-Language": "vi,en-US;q=0.9,en;q=0.8"
             }
             res = requests.get(url, headers=headers, timeout=90, verify=False)
             if res.status_code == 200:
@@ -30,8 +42,6 @@ class StockService:
 
     @staticmethod
     def calculate_technical_indicators(history_data):
-        import pandas as pd
-        import numpy as np
         
         if not history_data or len(history_data) < 30:
             return None, None, None, None, None

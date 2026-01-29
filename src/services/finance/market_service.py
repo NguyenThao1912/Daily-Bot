@@ -143,36 +143,56 @@ class MarketService:
 
     @staticmethod
     def _fetch_cafef_prop_trading():
+         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         try:
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # Full Headers as requested
             headers = {
-               "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-               "Referer": "https://cafef.vn/"
+                  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                  "Accept": "application/json, text/plain, */*",
+                  "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+                  "Connection": "keep-alive",
+                  "Sec-Fetch-Dest": "empty",
+                  "Sec-Fetch-Mode": "cors",
+                  "Sec-Fetch-Site": "same-site"
             }
             
-            # Fetch Buy Value
-            url_buy = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxgiaodichtudoanh.ashx?type=BUYVALUE"
-            res_buy = requests.get(url_buy, headers=headers, timeout=10, verify=False)
-            buy_data = res_buy.json() if res_buy.status_code == 200 else []
-            
-            # Fetch Sell Value
-            url_sell = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxgiaodichtudoanh.ashx?type=SELLVALUE"
-            res_sell = requests.get(url_sell, headers=headers, timeout=10, verify=False)
-            sell_data = res_sell.json() if res_sell.status_code == 200 else []
-            
             # Helper to map
-            def map_data(data_list):
+            def map_data(data_input):
                 d = {}
-                if not isinstance(data_list, list): return d
-                for item in data_list:
+                # Unwrap if it's the wrapper dict
+                target_list = data_input
+                if isinstance(data_input, dict):
+                    target_list = data_input.get("Data", [])
+                
+                if not isinstance(target_list, list): return d
+                
+                for item in target_list:
                     # CafeF usually returns 'StockCode' and 'Value'
+                    # Or 'Symbol' based on user JSON sample
                     sym = item.get('StockCode') or item.get('Symbol')
-                    val = item.get('Value') or item.get('TotalValue') or 0
+                    val = item.get('Value') or item.get('TotalValue') or item.get('Volume') or 0
                     if sym: d[sym] = float(val)
                 return d
 
-            buy_map = map_data(buy_data)
-            sell_map = map_data(sell_data)
+            # Base URL
+            base_url = "https://cafef.vn/du-lieu/ajax/mobile/smart/ajaxgiaodichtudoanh.ashx"
+
+            # Fetch Buy Value
+            params_buy = {"type": "BUYVALUE"}
+            res_buy = requests.get(base_url, headers=headers, params=params_buy, timeout=10, verify=True)
+            # print(f"DEBUG: Buy Status: {res_buy.status_code}") # Debug
+            # print(f"DEBUG: Buy Content: {res_buy.text[:100]}") # Debug
+            
+            # Handle response safely
+            buy_json = res_buy.json() if res_buy.status_code == 200 else {}
+            buy_map = map_data(buy_json)
+            # print(f"DEBUG: Buy Map Len: {len(buy_map)}") # Debug
+            
+            # Fetch Sell Value
+            params_sell = {"type": "SELLVALUE"}
+            res_sell = requests.get(base_url, headers=headers, params=params_sell, timeout=10, verify=True)
+            sell_json = res_sell.json() if res_sell.status_code == 200 else {}
+            sell_map = map_data(sell_json)
             
             all_syms = set(buy_map.keys()) | set(sell_map.keys())
             net_flow = []
