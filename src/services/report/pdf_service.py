@@ -58,9 +58,28 @@ class PDFService:
         # 1. Premium CSS Template
         css_string = f"""
             {font_css}
+            
+            /* --- PAGE SETTINGS (Standard Margin) --- */
             @page {{
                 size: A4 portrait;
+                /* Standard Administrative Margins: Top 2cm, Bottom 2cm, Left 3cm, Right 2cm */
+                margin-top: 20mm;
+                margin-bottom: 20mm;
+                margin-left: 30mm;
+                margin-right: 20mm;
+                
+                @bottom-right {{
+                    content: "Page " counter(page);
+                    font-size: 9pt;
+                    color: #7f8c8d;
+                    font-family: 'Roboto';
+                }}
+            }}
+
+            /* --- COVER PAGE (Full Bleed) --- */
+            @page cover {{
                 margin: 0;
+                @bottom-right {{ content: none; }}
             }}
             
             /* --- RESET & GLOBAL --- */
@@ -72,46 +91,28 @@ class PDFService:
                 line-height: 1.5; 
                 color: #2c3e50;
                 background-color: #fff;
-                margin: 0; 
-                padding: 0;
-                width: 210mm; /* Strict A4 Width */
+                /* No fixed width here, let @page handle margins */
             }}
             
             /* --- LAYOUT CONTAINERS --- */
             .cover-page {{
+                page: cover; /* Use named page 'cover' */
                 width: 210mm;
                 height: 297mm;
                 position: relative;
                 background-color: #2c3e50;
                 color: white;
-                padding: 20mm 20mm 40mm 20mm; /* Increased bottom padding to lift footer */
+                padding: 20mm 20mm 40mm 20mm;
                 overflow: hidden;
-                page-break-after: always;
+                break-after: page;
                 display: flex; 
                 flex-direction: column; 
                 justify-content: space-between;
             }}
 
-            .page-container {{
-                width: 210mm;
-                min-height: 297mm;
-                padding: 20mm;
-                position: relative;
-                page-break-after: always;
-                background-color: white;
-            }}
-            
-            /* Prevent blank page at the end */
-            .page-container:last-child {{
-                page-break-after: avoid;
-            }}
-
-            .footer-counter {{
-                position: absolute;
-                bottom: 15mm;
-                right: 20mm;
-                font-size: 9pt;
-                color: #bdc3c7;
+            .content-section {{
+               /* Content naturally flows */
+               margin-bottom: 20px;
             }}
             
             /* --- HEADINGS --- */
@@ -139,7 +140,7 @@ class PDFService:
                 padding: 15px 20px; 
                 margin-bottom: 25px; 
                 box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                break-inside: avoid;
+                break-inside: avoid; /* Avoid breaking card across pages */
             }}
             
             .item-title {{ 
@@ -208,6 +209,19 @@ class PDFService:
                 font-style: italic;
             }}
 
+            /* --- ACTION HIGHLIGHT --- */
+            .action-highlight {{
+                background-color: #fff9c4; /* Light Yellow */
+                color: #d35400; /* Dark Orange */
+                border-left: 5px solid #f39c12;
+                padding: 12px;
+                margin-top: 15px;
+                font-size: 10pt;
+                font-weight: 500;
+                border-radius: 4px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }}
+
             /* --- CHARTS GRID --- */
             .chart-grid {{
                 display: flex;
@@ -215,6 +229,7 @@ class PDFService:
                 justify-content: space-between;
                 gap: 15px;
                 margin-top: 20px;
+                break-inside: avoid;
             }}
             .chart-item {{
                 flex: 1 1 48%; /* 2 per row */
@@ -252,8 +267,7 @@ class PDFService:
             <!-- COVER PAGE -->
             <div class="cover-page">
                 <div>
-                     <!-- Decorative Background Elements could go here -->
-                     
+                     <!-- Decorative Background Elements -->
                      <div style="position: relative; z-index: 1; border-left: 8px solid #e67e22; padding-left: 25px; margin-top: 80px;">
                         <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: white; border: none;">DAILY</h1>
                         <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: #e67e22; border: none;">BRIEFING</h1>
@@ -272,13 +286,13 @@ class PDFService:
         """
 
         # Category Pages
-        for index, res in enumerate(results):
+        for res in results:
             cat = res.get("category", "unknown").upper()
             content = res.get("content", "")
             
             # Start New Section
             html_body += f"""
-            <div class="page-container">
+            <div class="content-section">
                 <h1 class="section-header">{cat}</h1>
                 {content}
             """
@@ -306,9 +320,7 @@ class PDFService:
                             """
                 html_body += '</div>'
             
-            # Page Number (excluding cover, so +1)
-            html_body += f'<div class="footer-counter">Page {index + 1}</div>'
-            html_body += "</div>" # Close page-container
+            html_body += "</div>" # Close content-section
 
         html_body += """
         </body>
@@ -324,7 +336,7 @@ class PDFService:
         pdf_path = os.path.join(output_dir, f"Daily_Report_{file_date}.pdf")
         
         try:
-            print("⏳ Rendering PDF with WeasyPrint (Premium Layout)...")
+            print("⏳ Rendering PDF with WeasyPrint (Standard Layout)...")
             HTML(string=html_body, base_url=".").write_pdf(
                 pdf_path, 
                 stylesheets=[CSS(string=css_string)]

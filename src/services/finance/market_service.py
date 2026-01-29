@@ -267,6 +267,124 @@ class MarketService:
             return None
 
     @staticmethod
+    def _generate_commodities_chart(comm_data):
+        try:
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            
+            # comm_data is list of dicts: {'goods': 'Gold', 'changePercent': 0.5, ...}
+            # Filter top items (e.g. Gold, Oil, Bitcoin, etc.) or just top 10 by importance?
+            # Let's take first 8 items as they are usually ranked by importance
+            items = comm_data[:8]
+            
+            names = [x.get('goods', 'N/A') for x in items]
+            changes = []
+            for x in items:
+                try:
+                    c = float(x.get('changePercent', 0))
+                except:
+                    c = 0
+                changes.append(c)
+
+            # Colors
+            colors = ['#2ecc71' if c >= 0 else '#e74c3c' for c in changes]
+            
+            # Plot
+            fig = Figure(figsize=(8, 5))
+            canvas = FigureCanvas(fig)
+            ax = fig.add_subplot(111)
+            
+            bars = ax.barh(names, changes, color=colors)
+            ax.set_title('Biến động Hàng Hóa (%)')
+            ax.set_xlabel('% Thay đổi')
+            ax.axvline(x=0, color='black', linewidth=0.8)
+            ax.grid(True, axis='x', linestyle='--', alpha=0.5)
+            ax.invert_yaxis()
+            
+            for bar in bars:
+                width = bar.get_width()
+                label_x_pos = width
+                align = 'left' if width > 0 else 'right'
+                offset = 0.1 if width > 0 else -0.1
+                ax.text(label_x_pos + offset, bar.get_y() + bar.get_height()/2, 
+                        f'{width:+.2f}%', va='center', ha=align, fontsize=9, fontweight='bold')
+
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            chart_path = os.path.join(output_dir, "commodities_chart.png")
+            
+            fig.tight_layout()
+            canvas.print_png(chart_path)
+            return chart_path
+        except Exception as e:
+            print(f"⚠️ Commodities Chart Error: {e}")
+            return None
+
+    @staticmethod
+    def _generate_global_chart(global_data):
+        try:
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            
+            # global_data is list of dicts.
+            # Names can be long. Let's pick Key Indices: Dow Jones, Nasdaq, S&P 500, Nikkei 225, Shanghai, Hang Seng, FTSE 100, DAX
+            # Filter by known keywords or just take top 8
+            
+            # Simple approach: Top 8 from list
+            items = global_data[:8]
+            
+            names = []
+            changes = []
+            for x in items:
+                n = x.get('Symbol') or x.get('Name') or 'N/A'
+                # Shorten names
+                n = n.replace('COMPOSITE', '').replace('INDEX', '').strip()
+                names.append(n)
+                
+                # Change percent might be string "0.5%" or float
+                try:
+                    ch_raw = x.get('ChangePercent') or x.get('PercentChange') or 0
+                    if isinstance(ch_raw, str):
+                        ch_raw = ch_raw.replace('%', '')
+                    changes.append(float(ch_raw))
+                except:
+                    changes.append(0)
+
+            colors = ['#2ecc71' if c >= 0 else '#e74c3c' for c in changes]
+            
+            fig = Figure(figsize=(8, 5))
+            canvas = FigureCanvas(fig)
+            ax = fig.add_subplot(111)
+            
+            bars = ax.barh(names, changes, color=colors)
+            ax.set_title('Chỉ số Thế giới (%)')
+            ax.set_xlabel('% Thay đổi')
+            ax.axvline(x=0, color='black', linewidth=0.8)
+            ax.grid(True, axis='x', linestyle='--', alpha=0.5)
+            ax.invert_yaxis()
+            
+            for bar in bars:
+                width = bar.get_width()
+                label_x_pos = width
+                align = 'left' if width > 0 else 'right'
+                offset = 0.05 if width > 0 else -0.05
+                ax.text(label_x_pos + offset, bar.get_y() + bar.get_height()/2, 
+                        f'{width:+.2f}%', va='center', ha=align, fontsize=9, fontweight='bold')
+
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            chart_path = os.path.join(output_dir, "global_chart.png")
+            
+            fig.tight_layout()
+            canvas.print_png(chart_path)
+            return chart_path
+        except Exception as e:
+            print(f"⚠️ Global Chart Error: {e}")
+            return None
+
+    @staticmethod
     def fetch_market():
         lines = []
         chart_paths = []
@@ -298,6 +416,11 @@ class MarketService:
         if comm_data and comm_data.get('Success') and 'Data' in comm_data:
             comm_list = comm_data['Data']
             lines.append("[HÀNG HÓA - TOP 15 QUAN TRỌNG]")
+            
+            # Generate Chart
+            c_chart = MarketService._generate_commodities_chart(comm_list)
+            if c_chart: chart_paths.append(c_chart)
+
             for item in comm_list[:15]:
                 name = item.get('goods')
                 price = item.get('last')
@@ -310,6 +433,11 @@ class MarketService:
         if gl_data:
             if isinstance(gl_data, list):
                 lines.append("\n[CHỈ SỐ THẾ GIỚI]")
+                
+                # Generate Chart
+                g_chart = MarketService._generate_global_chart(gl_data)
+                if g_chart: chart_paths.append(g_chart)
+
                 count = 0
                 for item in gl_data:
                      if count >= 3: break

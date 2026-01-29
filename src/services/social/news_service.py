@@ -33,8 +33,11 @@ class NewsService:
             titles = []
             traffic = []
             
-            for t in trends_data[:5]: # Top 5
-                titles.append(t['title'][:20] + "...") # Truncate title further
+            # Limit to top 15 for chart
+            chart_data = trends_data[:15]
+            
+            for t in chart_data: 
+                titles.append(t['title'][:25] + "...") # Slightly longer title
                 # Parse traffic string "20.000+" -> 20000
                 tf_str = t['traffic'].replace('.', '').replace(',', '').replace('+', '')
                 try: traffic.append(int(tf_str))
@@ -46,14 +49,17 @@ class NewsService:
                 os.makedirs(output_dir)
             chart_path = os.path.join(output_dir, "trend_chart.png")
 
+            # Dynamic Height: Base 2 + 0.5 per item. For 15 items -> ~9.5 inch height
+            fig_height = max(6, len(chart_data) * 0.5 + 2)
+            
             # Plot properties (OO)
-            fig = Figure(figsize=(10, 6))
+            fig = Figure(figsize=(10, fig_height))
             canvas = FigureCanvas(fig)
             ax = fig.add_subplot(111)
             
             bars = ax.barh(titles, traffic, color='#3498db') # Blue
             ax.set_xlabel('Lượt tìm kiếm')
-            ax.set_title('Top Google Trends Vietnam')
+            ax.set_title(f'Top {len(chart_data)} Google Trends Vietnam')
             ax.invert_yaxis() # Top trend at top
             
             # Add value labels
@@ -70,7 +76,7 @@ class NewsService:
             return None
 
     @staticmethod
-    def fetch_trends(limit=5):
+    def fetch_trends(limit=15):
         data = NewsService._fetch_from_worker("/trends", params={"limit": limit})
         if not data or 'data' not in data:
             return {"text": "Không lấy được Google Trends.", "chart_path": None}

@@ -3,8 +3,7 @@ name: Run Morning Agent
 on:
   schedule:
     # 6h00 Sáng VN (UTC+7) = 23h00 UTC
-    # 18h00 Tối VN (UTC+7) = 11h00 UTC
-    - cron: '0 23,11 * * *'
+    - cron: '0 23 * * *'
   workflow_dispatch: # Cho phép chạy thủ công
 
 jobs:

@@ -18,7 +18,7 @@ CRITICAL: TUYỆT ĐỐI KHÔNG SỬ DỤNG  ```html HOẶC ``` ĐỂ BAO QUANH 
 CHỈ TRẢ VỀ RAW HTML STRING.
 Nếu bạn trả về Markdown code block, hệ thống sẽ bị lỗi.
 Bạn KHÔNG trả về Markdown. Bạn phải trả về mã HTML sạch, chuẩn để render vào file PDF.
-Sử dụng các class CSS sau: `.section-title`, `.card`, `.item-title`, `.item-meta`, `.item-content`, `.alert`.
+Sử dụng các class CSS sau: `.section-title`, `.card`, `.item-title`, `.item-meta`, `.item-content`, `.alert`, `.action-highlight`.
 
 Cấu trúc mẫu cho mỗi mục (Ví dụ):
 ```html
@@ -44,10 +44,10 @@ Cấu trúc mẫu cho mỗi mục (Ví dụ):
     <div>Phân tích rủi ro ngắn gọn...</div>
   </div>
 
-  <div class="item-content">
-    <div class="sub-label"><b>⚡ Hành động:</b></div>
+  <div class="item-content action-highlight">
+    <div class="sub-label" style="color: #d35400;"><b>⚡ HÀNH ĐỘNG CẦN LÀM:</b></div>
     <ul>
-      <li>[ ] Hành động 1</li>
+      <li>[ ] Hành động 1 (Quan trọng)</li>
       <li>[ ] Hành động 2</li>
     </ul>
   </div>
