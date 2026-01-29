@@ -67,8 +67,8 @@ class MarketService:
             # But the list is huge. Let's map the important ones and list others if possible.
             # Actually, user said "lấy all đi". 
             
-            lines.append("[HÀNG HÓA - ALL]")
-            for item in comm_list:
+            lines.append("[HÀNG HÓA - TOP 15 QUAN TRỌNG]")
+            for item in comm_list[:15]:
                 name = item.get('goods')
                 price = item.get('last')
                 change = item.get('changePercent')
