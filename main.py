@@ -137,8 +137,12 @@ async def main():
     print("⏳ Fetching real-time data...")
 
     # Fetching with safe extraction
+    # Fetching with safe extraction
     weather_text, weather_chart = get_safe_data(WeatherService.fetch_weather())
-    market_text = str(MarketService.fetch_market())
+    
+    # Market now returns Dict with chart_path as LIST
+    market_text, market_charts = get_safe_data(MarketService.fetch_market())
+    
     banking_text, banking_chart = get_safe_data(BankingService.fetch_banking_rates())
     stock_text = str(StockService.fetch_stock_analysis())
     crypto_text = str(CryptoService.fetch_crypto())
@@ -157,14 +161,15 @@ async def main():
             f"--- [CRYPTO] ---\n{crypto_text}"
         ),
         "weather": weather_text,
-        "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.", # Placeholder or fetch from Cal
+        "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.",
         "tech": tech_news,
         "news": news_text,
         "trends": trends_text,
         # Hidden fields for internal use/charts
         "weather_chart": weather_chart,
         "trends_chart": trends_chart,
-        "rates_chart": banking_chart
+        "finance_market_charts": market_charts,
+        "finance_banking_chart": banking_chart
     }
 
     # Fetch Supabase CRM Data
@@ -203,10 +208,21 @@ async def main():
         await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=header, parse_mode='Markdown')
 
         # Prepare Data for PDF
+        # Aggregate Finance Charts
+        finance_charts = []
+        m_charts = data_map.get("finance_market_charts")
+        if m_charts:
+            if isinstance(m_charts, list): finance_charts.extend(m_charts)
+            else: finance_charts.append(m_charts)
+        
+        b_chart = data_map.get("finance_banking_chart")
+        if b_chart:
+            finance_charts.append(b_chart)
+
         chart_source_map = {
             "weather": data_map["weather_chart"],
             "trends": data_map["trends_chart"],
-            "finance": data_map["rates_chart"]
+            "finance": finance_charts
         }
 
         # Generate PDF

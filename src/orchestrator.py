@@ -101,6 +101,14 @@ class Orchestrator:
         
         # Run concurrently (but bounded by Semaphore)
         results = await asyncio.gather(*tasks)
+
+        # CLEANUP: Strip Markdown Code Blocks
+        for res in results:
+            content = res.get("content", "")
+            if "```html" in content:
+                res["content"] = content.replace("```html", "").replace("```", "").strip()
+            elif "```" in content:
+                res["content"] = content.replace("```", "").strip()
         
         # 3. (Deleted) Raw Data fallback removed as requested.
         

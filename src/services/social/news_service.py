@@ -26,14 +26,15 @@ class NewsService:
     @staticmethod
     def _generate_trend_chart(trends_data):
         try:
-            import matplotlib.pyplot as plt
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
             
             # Simple data extraction
             titles = []
             traffic = []
             
             for t in trends_data[:5]: # Top 5
-                titles.append(t['title'][:15] + "...") # Truncate title
+                titles.append(t['title'][:20] + "...") # Truncate title further
                 # Parse traffic string "20.000+" -> 20000
                 tf_str = t['traffic'].replace('.', '').replace(',', '').replace('+', '')
                 try: traffic.append(int(tf_str))
@@ -45,22 +46,24 @@ class NewsService:
                 os.makedirs(output_dir)
             chart_path = os.path.join(output_dir, "trend_chart.png")
 
-            # Plot properties
-            plt.figure(figsize=(10, 6))
-            bars = plt.barh(titles, traffic, color='skyblue')
-            plt.xlabel('Lượt tìm kiếm')
-            plt.title('Top Google Trends Vietnam')
-            plt.gca().invert_yaxis() # Top trend at top
+            # Plot properties (OO)
+            fig = Figure(figsize=(10, 6))
+            canvas = FigureCanvas(fig)
+            ax = fig.add_subplot(111)
+            
+            bars = ax.barh(titles, traffic, color='#3498db') # Blue
+            ax.set_xlabel('Lượt tìm kiếm')
+            ax.set_title('Top Google Trends Vietnam')
+            ax.invert_yaxis() # Top trend at top
             
             # Add value labels
             for bar in bars:
                 width = bar.get_width()
-                plt.text(width, bar.get_y() + bar.get_height()/2, f'{int(width):,}', 
+                ax.text(width, bar.get_y() + bar.get_height()/2, f'{int(width):,}', 
                          ha='left', va='center', fontweight='bold')
 
-            plt.tight_layout()
-            plt.savefig(chart_path)
-            plt.close()
+            fig.tight_layout()
+            canvas.print_png(chart_path)
             return chart_path
         except Exception as e:
             print(f"⚠️ Trend Chart Error: {e}")

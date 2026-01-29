@@ -14,6 +14,9 @@ NGUYÊN TẮC CỐT LÕI (CORE PRINCIPLES):
    - Dùng ngôn ngữ chuyên nghiệp (Business/Professional), không dùng Telegram Slang.
 
 ĐỊNH DẠNG PHẢN HỒI (BẮT BUỘC - HTML):
+CRITICAL: TUYỆT ĐỐI KHÔNG SỬ DỤNG  ```html HOẶC ``` ĐỂ BAO QUANH CODE.
+CHỈ TRẢ VỀ RAW HTML STRING.
+Nếu bạn trả về Markdown code block, hệ thống sẽ bị lỗi.
 Bạn KHÔNG trả về Markdown. Bạn phải trả về mã HTML sạch, chuẩn để render vào file PDF.
 Sử dụng các class CSS sau: `.section-title`, `.card`, `.item-title`, `.item-meta`, `.item-content`, `.alert`.
 
@@ -23,29 +26,32 @@ Cấu trúc mẫu cho mỗi mục (Ví dụ):
   <div class="item-title">
     <span class="icon">📰</span> TIÊU ĐỀ MỤC
   </div>
-  <table class="data-table">
-    <tr>
-      <td width="30%"><b>Đánh giá</b></td>
-      <td>⭐ 5/5 | 🔥 Rủi ro: Cao</td>
-    </tr>
-    <tr>
-      <td><b>Dữ liệu</b></td>
-      <td>Tóm tắt nội dung <a href="URL">Xem Link</a></td>
-    </tr>
-    <tr>
-      <td><b>Góc nhìn</b></td>
-      <td>Phân tích rủi ro ngắn gọn.</td>
-    </tr>
-    <tr>
-      <td><b>Hành động</b></td>
-      <td>
-        <ul>
-          <li>[ ] Hành động 1</li>
-          <li>[ ] Hành động 2</li>
-        </ul>
-      </td>
-    </tr>
-  </table>
+  
+  <div class="item-meta">
+    <b>⭐ Đánh giá:</b> 5/5 | 🔥 <b>Rủi ro:</b> Cao
+  </div>
+
+  <div class="item-content">
+    <div class="sub-label"><b>📉 Dữ liệu:</b></div>
+    <div>
+        <!-- AI chèn bảng hoặc text full-width vào đây -->
+        Tóm tắt nội dung... <a href="URL">Xem Link</a>
+    </div>
+  </div>
+
+  <div class="item-content">
+    <div class="sub-label"><b>🧠 Góc nhìn Chiến lược:</b></div>
+    <div>Phân tích rủi ro ngắn gọn...</div>
+  </div>
+
+  <div class="item-content">
+    <div class="sub-label"><b>⚡ Hành động:</b></div>
+    <ul>
+      <li>[ ] Hành động 1</li>
+      <li>[ ] Hành động 2</li>
+    </ul>
+  </div>
+
   <div class="alert">
     👉 <i>Gợi ý nhắc nhở: /remind_keyword_08:00</i>
   </div>

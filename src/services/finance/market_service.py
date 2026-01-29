@@ -198,14 +198,88 @@ class MarketService:
             return [], [], [], []
 
     @staticmethod
+    def _generate_foreign_flow_chart(net_flow_data):
+        try:
+            from matplotlib.figure import Figure
+            from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+            
+            # net_flow_data is list of (Symbol, NetValue)
+            # Filter top 5 buy and top 5 sell (already sorted in fetch logic, but let's ensure)
+            # data comes in as full list? No, fetch_market gets top_buy and top_sell.
+            # Let's align the interface. We'll accept (top_buy, top_sell).
+            
+            top_buy, top_sell = net_flow_data
+            
+            # Combine for chart: Top Sell (negative) ... Top Buy (positive)
+            # to make a diverging bar chart
+            
+            # Prepare data
+            chart_data = [] # (Symbol, Value)
+            # Add Top Sell first (so they appear at bottom or left?)
+            # Barh: Y axis is categories. 
+            # We want Buy on top, Sell on bottom? Or diverging?
+            # Let's put Top Buy on top, Top Sell on bottom.
+            
+            # Sort Top Buy desc (biggest first)
+            # Sort Top Sell desc (most negative first - currently they are passed as such?)
+            
+            combined = top_buy + top_sell # [(Sym, Val), ...]
+            combined.sort(key=lambda x: x[1]) # Sort by value asc (Negative -> Positive)
+            
+            symbols = [x[0] for x in combined]
+            values = [x[1] / 1_000_000_000 for x in combined] # Convert to Billion VND
+            
+            colors = ['#2ecc71' if v > 0 else '#e74c3c' for v in values]
+            
+            # Plot
+            fig = Figure(figsize=(10, 6))
+            canvas = FigureCanvas(fig)
+            ax = fig.add_subplot(111)
+            
+            bars = ax.barh(symbols, values, color=colors)
+            
+            ax.set_title('Top Khối Ngoại Mua/Bán Ròng (Tỷ VNĐ)')
+            ax.set_xlabel('Giá trị ròng (Tỷ VNĐ)')
+            ax.axvline(x=0, color='black', linewidth=0.8)
+            ax.grid(True, axis='x', linestyle='--', alpha=0.5)
+            
+            # Labels
+            for bar in bars:
+                width = bar.get_width()
+                label_x_pos = width
+                align = 'left' if width > 0 else 'right'
+                offset = 2 if width > 0 else -2
+                
+                ax.text(label_x_pos + (offset/100 * abs(width)), bar.get_y() + bar.get_height()/2, 
+                         f'{width:,.1f}', 
+                         va='center', ha=align, fontsize=9, fontweight='bold')
+
+            output_dir = "output"
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            chart_path = os.path.join(output_dir, "foreign_flow_chart.png")
+            
+            fig.tight_layout()
+            canvas.print_png(chart_path)
+            return chart_path
+        except Exception as e:
+            print(f"⚠️ Foreign Flow Chart Error: {e}")
+            return None
+
+    @staticmethod
     def fetch_market():
         lines = []
-        
+        chart_paths = []
+
         # 0. Foreign Flow (NEW)
         top_buy, top_sell, raw_buy, raw_sell = MarketService._fetch_cafef_foreign_flow()
         if top_buy or top_sell:
             lines.append("[KHỐI NGOẠI (HOSE)]")
             
+            # Generate Foreign Flow Chart
+            ff_chart = MarketService._generate_foreign_flow_chart((top_buy, top_sell))
+            if ff_chart: chart_paths.append(ff_chart)
+
             if top_buy:
                 lines.append("Mua ròng mạnh:")
                 for sym, val in top_buy:
@@ -250,10 +324,21 @@ class MarketService:
         leaders = MarketService._fetch_cafef_leaders()
         if leaders and isinstance(leaders, list):
              l_strs = []
+             
+             # Generate Leader Chart
+             leader_chart = MarketService._generate_leader_chart(leaders)
+             if leader_chart: chart_paths.append(leader_chart)
+             
              for item in leaders:
                  sym = item.get('Symbol') or item.get('StockCode')
                  if sym: l_strs.append(sym)
              if l_strs:
                  lines.append(", ".join(l_strs))
         
-        return "\n\n[MARKET DATA - CafeF]:\n" + "\n".join(lines)
+        return {
+            "text": "\n\n[MARKET DATA - CafeF]:\n" + "\n".join(lines),
+            "chart_path": chart_paths # Dict key expects 'chart_path' but we pass a list here. 
+            # Note: get_safe_data in main.py will extract this. 
+            # We'll need to handle list in main.py if get_safe_data expects single.
+            # Actually get_safe_data just gets the value. So list is fine.
+        }

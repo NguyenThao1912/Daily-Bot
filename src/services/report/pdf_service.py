@@ -1,7 +1,6 @@
 import os
 import base64
 from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
 
 class PDFService:
     @staticmethod
@@ -40,7 +39,7 @@ class PDFService:
     @staticmethod
     def generate_report(results, chart_map=None):
         """
-        Generates a PDF report using WeasyPrint.
+        Generates a PDF report using WeasyPrint with Premium Magazine Style.
         """
         if not chart_map:
             chart_map = {}
@@ -60,153 +59,178 @@ class PDFService:
         css_string = f"""
             {font_css}
             @page {{
-                size: A4;
-                margin: 2cm;
-                @bottom-right {{
-                    content: "Page " counter(page) " of " counter(pages);
-                    font-size: 9pt;
-                    color: #999;
-                    font-family: 'Roboto';
-                }}
-                @bottom-left {{
-                    content: "Daily Strategy Report";
-                    font-size: 9pt;
-                    color: #999;
-                    font-family: 'Roboto';
-                }}
+                size: A4 portrait;
+                margin: 0;
             }}
             
             /* --- RESET & GLOBAL --- */
-            * {{
-                box-sizing: border-box;
-            }}
+            * {{ box-sizing: border-box; }}
 
             body {{ 
                 font-family: 'Roboto', sans-serif; 
-                font-size: 11pt; 
-                line-height: 1.6; 
-                color: #333;
-                width: 100%;
+                font-size: 10pt; 
+                line-height: 1.5; 
+                color: #2c3e50;
+                background-color: #fff;
+                margin: 0; 
+                padding: 0;
+                width: 210mm; /* Strict A4 Width */
             }}
             
-            /* --- TYPOGRAPHY --- */
-            h1 {{ 
-                color: #1a252f; 
+            /* --- LAYOUT CONTAINERS --- */
+            .cover-page {{
+                width: 210mm;
+                height: 297mm;
+                position: relative;
+                background-color: #2c3e50;
+                color: white;
+                padding: 20mm 20mm 40mm 20mm; /* Increased bottom padding to lift footer */
+                overflow: hidden;
+                page-break-after: always;
+                display: flex; 
+                flex-direction: column; 
+                justify-content: space-between;
+            }}
+
+            .page-container {{
+                width: 210mm;
+                min-height: 297mm;
+                padding: 20mm;
+                position: relative;
+                page-break-after: always;
+                background-color: white;
+            }}
+            
+            /* Prevent blank page at the end */
+            .page-container:last-child {{
+                page-break-after: avoid;
+            }}
+
+            .footer-counter {{
+                position: absolute;
+                bottom: 15mm;
+                right: 20mm;
+                font-size: 9pt;
+                color: #bdc3c7;
+            }}
+            
+            /* --- HEADINGS --- */
+            h1.section-header {{ 
+                color: #2c3e50; 
                 font-size: 24pt; 
                 text-transform: uppercase; 
                 letter-spacing: 2px;
-                border-bottom: 3px solid #3498db; 
-                padding-bottom: 15px; 
+                border-bottom: 4px solid #e67e22; /* Amber Accent */
+                padding-bottom: 10px; 
                 margin-top: 0;
-            }}
-            
-            h2 {{ 
-                color: #2980b9; 
-                font-size: 16pt; 
-                margin-top: 30px; 
-                margin-bottom: 15px;
-                font-weight: 700;
-            }}
-            
-            /* --- COMPONENTS --- */
-            .category-section {{ 
-                break-after: always; 
-                width: 100%;
+                margin-bottom: 30px;
+                text-align: right;
             }}
 
-            /* Modern Card Style */
+            h2 {{ color: #e67e22; font-size: 14pt; margin-top: 20px; font-weight: 700; }}
+            h3 {{ color: #34495e; font-size: 12pt; margin-bottom: 5px; font-weight: 600; }}
+            
+            /* --- CARD COMPONENT --- */
             .card {{ 
-                background-color: #fff; 
-                border: 1px solid #e0e0e0;
-                border-left: 5px solid #3498db; /* Blue Accent */
-                border-radius: 4px;
-                padding: 20px; 
+                background-color: #fdfdfd; 
+                border: 1px solid #eee;
+                border-left: 6px solid #e67e22; /* Amber Accent */
+                border-radius: 6px;
+                padding: 15px 20px; 
                 margin-bottom: 25px; 
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
                 break-inside: avoid;
-                box-decoration-break: clone;
-                width: 100%;
             }}
             
             .item-title {{ 
                 font-size: 13pt; 
-                font-weight: bold; 
+                font-weight: 800; 
                 color: #2c3e50; 
                 margin-bottom: 15px;
-                display: block;
                 border-bottom: 1px solid #eee;
                 padding-bottom: 8px;
+                display: flex; align-items: center;
             }}
             
-            /* Professional Table */
+            /* --- METADATA & LABELS --- */
+            .item-meta {{
+                background: #f4f6f7;
+                padding: 8px 12px;
+                border-radius: 4px;
+                border: 1px solid #ecf0f1;
+                color: #555;
+                font-size: 9pt;
+                margin-bottom: 12px;
+            }}
+            
+            .sub-label {{
+                font-size: 8pt;
+                font-weight: 700;
+                color: #7f8c8d;
+                text-transform: uppercase;
+                margin-bottom: 4px;
+                letter-spacing: 0.5px;
+                margin-top: 10px;
+                display: block;
+            }}
+
+            /* --- TABLES --- */
             table {{ 
-                width: 100%; 
+                width: 100% !important; 
                 border-collapse: collapse; 
-                margin-bottom: 15px; 
-                font-size: 10pt;
-                table-layout: fixed; /* Fix width to page */
+                margin: 10px 0; 
+                font-size: 9pt;
+                table-layout: auto; 
             }}
-            
             th {{ 
                 background-color: #34495e; 
                 color: #fff; 
-                padding: 10px 12px; 
+                padding: 10px; 
                 text-align: left; 
                 font-weight: 600;
-                border: 1px solid #34495e;
-                word-wrap: break-word; /* Prevent overflow */
             }}
-            
             td {{ 
-                padding: 10px 12px; 
-                border: 1px solid #e0e0e0; 
+                padding: 8px 10px; 
+                border-bottom: 1px solid #ecf0f1; 
                 vertical-align: top;
-                word-wrap: break-word; /* Prevent overflow */
-                overflow-wrap: break-word;
             }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
             
-            tr:nth-child(even) {{
-                background-color: #f8f9fa;
-            }}
-            
-            /* Alert Box */
+            /* --- ALERTS --- */
             .alert {{ 
-                background-color: #fff8e1; 
-                color: #856404; 
-                padding: 12px; 
-                border: 1px solid #ffeeba; 
+                background-color: #e8f8f5; /* Mint Green */
+                color: #16a085; 
+                padding: 10px; 
+                border: 1px solid #d1f2eb; 
                 border-radius: 4px; 
-                margin-top: 10px; 
-                font-size: 10pt;
+                margin-top: 15px; 
+                font-size: 9pt;
+                font-style: italic;
             }}
-            
-            /* Motto Footer */
-            .motto {{ 
-                text-align: center; 
-                font-style: italic; 
-                color: #7f8c8d; 
-                margin-top: 50px; 
-                padding-top: 20px; 
-                border-top: 1px solid #eee; 
+
+            /* --- CHARTS GRID --- */
+            .chart-grid {{
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                gap: 15px;
+                margin-top: 20px;
             }}
-            
-            .chart-container {{ 
-                text-align: center; 
-                margin: 30px 0; 
-                break-inside: avoid; 
-                padding: 10px;
+            .chart-item {{
+                flex: 1 1 48%; /* 2 per row */
                 background: #fff;
-                border: 1px solid #ddd;
+                border: 1px solid #e0e0e0;
+                padding: 5px;
+                border-radius: 4px;
+                text-align: center;
+                min-width: 300px;
             }}
-            .chart-img {{ 
-                max-width: 100%; 
-                height: auto; 
+            .chart-img {{
+                max-width: 100%; height: auto; display: block;
             }}
             
-            ul {{ margin: 0; padding-left: 20px; }}
-            li {{ margin-bottom: 5px; }}
-            
-            /* Links */
-            a {{ color: #2980b9; text-decoration: none; }}
+            /* --- LINKS --- */
+            a {{ color: #2980b9; text-decoration: none; font-weight: 500; }}
         """
 
         # 2. Build HTML Content
@@ -225,60 +249,66 @@ class PDFService:
             <title>Daily Report</title>
         </head>
         <body>
-            <!-- TITLE PAGE -->
-            <div style="
-                height: 90vh; 
-                display: flex; 
-                flex-direction: column; 
-                justify-content: center; 
-                align-items: center; 
-                text-align: center; 
-                border: 2px solid #34495e;
-                padding: 40px;
-                margin-top: 20px;
-                break-after: always;
-            ">
-                <div style="font-size: 60px; margin-bottom: 20px;">📊</div>
-                <h1 style="font-size: 28pt; border: none; margin-bottom: 10px; color: #2c3e50;">BÁO CÁO HÀNG NGÀY</h1>
-                <h2 style="font-size: 16pt; border: none; color: #7f8c8d; font-weight: 300; margin-top: 0;">DAILY INTELLIGENCE BRIEFING</h2>
-                
-                <div style="margin-top: 60px; border-top: 2px solid #3498db; display: inline-block; padding-top: 20px; width: 50%;">
-                    <h3 style="font-size: 24pt; margin: 0; color: #2c3e50;">{date_str}</h3>
-                    <p style="color: #95a5a6; margin-top: 5px;">Cập nhật lúc: {time_str}</p>
+            <!-- COVER PAGE -->
+            <div class="cover-page">
+                <div>
+                     <!-- Decorative Background Elements could go here -->
+                     
+                     <div style="position: relative; z-index: 1; border-left: 8px solid #e67e22; padding-left: 25px; margin-top: 80px;">
+                        <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: white; border: none;">DAILY</h1>
+                        <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: #e67e22; border: none;">BRIEFING</h1>
+                        <p style="font-size: 14pt; margin-top: 15px; color: #bdc3c7; letter-spacing: 2px; text-transform: uppercase;">Intelligence Report</p>
+                     </div>
                 </div>
 
-                <div style="margin-top: auto; color: #bdc3c7; font-size: 10pt;">
-                    PREPARED BY <b>DAILY-BOT AI</b><br>
-                    INTERNAL USE ONLY
+                <div style="text-align: right; z-index: 1;">
+                    <div style="font-size: 28pt; font-weight: bold;">{date_str}</div>
+                    <div style="font-size: 12pt; color: #bdc3c7;">UPDATED: {time_str}</div>
+                    <div style="margin-top: 30px; border-top: 1px solid #7f8c8d; padding-top: 15px; font-size: 10pt;">
+                        PREPARED BY <b>DAILY-BOT AI</b>
+                    </div>
                 </div>
             </div>
         """
 
         # Category Pages
-        for res in results:
+        for index, res in enumerate(results):
             cat = res.get("category", "unknown").upper()
             content = res.get("content", "")
             
             # Start New Section
             html_body += f"""
-            <div class="category-section">
-                <h1>{cat} REPORT</h1>
+            <div class="page-container">
+                <h1 class="section-header">{cat}</h1>
                 {content}
             """
             
-            # Embed Chart
-            c_path = chart_map.get(res.get("category"))
-            if c_path and os.path.exists(c_path):
-                b64_img = PDFService._read_file_as_base64(c_path)
-                if b64_img:
-                    html_body += f"""
-                    <div class="chart-container">
-                        <h3>Biểu đồ {cat}</h3>
-                        <img class="chart-img" src="data:image/png;base64,{b64_img}" />
-                    </div>
-                    """
+            # Embed Chart(s)
+            c_val = chart_map.get(res.get("category"))
             
-            html_body += "</div>" # Close category-section
+            # Normalize to list
+            c_paths = []
+            if isinstance(c_val, list):
+                c_paths = c_val
+            elif isinstance(c_val, str):
+                c_paths = [c_val]
+                
+            if c_paths:
+                html_body += '<div class="chart-grid">'
+                for c_path in c_paths:
+                    if c_path and os.path.exists(c_path):
+                        b64_img = PDFService._read_file_as_base64(c_path)
+                        if b64_img:
+                             html_body += f"""
+                                <div class="chart-item">
+                                    <img class="chart-img" src="data:image/png;base64,{b64_img}" />
+                                </div>
+                            """
+                html_body += '</div>'
+            
+            # Page Number (excluding cover, so +1)
+            html_body += f'<div class="footer-counter">Page {index + 1}</div>'
+            html_body += "</div>" # Close page-container
 
         html_body += """
         </body>
@@ -290,12 +320,11 @@ class PDFService:
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
             
-        # Filename with Date: Daily_Report_YYYY-MM-DD.pdf
         file_date = now_dt.strftime('%Y-%m-%d')
         pdf_path = os.path.join(output_dir, f"Daily_Report_{file_date}.pdf")
         
         try:
-            print("⏳ Rendering PDF with WeasyPrint...")
+            print("⏳ Rendering PDF with WeasyPrint (Premium Layout)...")
             HTML(string=html_body, base_url=".").write_pdf(
                 pdf_path, 
                 stylesheets=[CSS(string=css_string)]
@@ -304,4 +333,3 @@ class PDFService:
         except Exception as e:
              print(f"❌ PDF Write Error: {e}")
              return None
-
