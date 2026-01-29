@@ -15,7 +15,7 @@ class NewsService:
             return None
 
     @staticmethod
-    def fetch_news(news_type="general", limit=10):
+    def fetch_news(news_type="general", limit=20):
         data = NewsService._fetch_from_worker("/news", params={"type": news_type, "limit": limit})
         if not data or 'data' not in data:
             return "Không lấy được tin tức."
