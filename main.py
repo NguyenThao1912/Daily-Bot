@@ -227,9 +227,6 @@ async def main():
                     await bot.send_photo(chat_id=Config.TELEGRAM_CHAT_ID, photo=photo, caption=caption)
             except Exception as e:
                 print(f"⚠️ Chart Send Error ({cat}): {e}")
-
-    else:
-
     else:
         print("⚠️ No TELEGRAM_CHAT_ID, skipping send.")
     
