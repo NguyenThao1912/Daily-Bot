@@ -83,15 +83,19 @@ class Orchestrator:
             async with semaphore:
                 raw_data = category_data.get(agent.name, "Không có dữ liệu mới.")
                 processed_categories.add(agent.name)
-                print(f"🤖 Start: {agent.name}...")
+                
+                # Log Data sent to AI
+                preview = raw_data[:120].replace('\n', ' ') + "..." if len(raw_data) > 120 else raw_data.replace('\n', ' ')
+                print(f"🤖 Start: {agent.name} | Input: {len(raw_data)} chars | Preview: {preview}")
+                print(f"   👉 Sending to AI...")
                 try:
                     # Timeout after 45 seconds per agent
-                    content = await asyncio.wait_for(agent.generate_impact(user_context, raw_data), timeout=45.0)
+                    content = await asyncio.wait_for(agent.generate_impact(user_context, raw_data), timeout=90.0)
                     print(f"✅ Finish: {agent.name}")
                     return {"category": agent.name, "content": content}
                 except asyncio.TimeoutError:
                     print(f"❌ Timeout ({agent.name}): Skipping...")
-                    return {"category": agent.name, "content": f"⚠️ {agent.name}: Bỏ qua do AI treo quá lâu (>45s)."}
+                    return {"category": agent.name, "content": f"⚠️ {agent.name}: Bỏ qua do AI treo quá lâu (>90s)."}
                 except Exception as e:
                     print(f"❌ Error ({agent.name}): {e}")
                     return {"category": agent.name, "content": f"⚠️ {agent.name}: Lỗi xử lý ({str(e)})."}

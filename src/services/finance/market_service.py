@@ -143,7 +143,6 @@ class MarketService:
 
     @staticmethod
     def _fetch_cafef_prop_trading():
-         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         try:
             # Full Headers as requested
             headers = {

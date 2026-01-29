@@ -19,6 +19,11 @@ class Config:
     WEATHER_LOCATION = os.getenv("WEATHER_LOCATION", "Hanoi")
     STOCK_WATCHLIST = os.getenv("STOCK_WATCHLIST", "FPT.VN,HPG.VN,VHM.VN,VCB.VN,MBB.VN,ACB.VN,TCB.VN,VIC.VN,^VNINDEX").split(",")
 
+    # Default Portfolio (Hardcoded for now as requested)
+    # Format: {"Symbol": {"vol": float, "cost": float}}
+    DEFAULT_PORTFOLIO = {
+        "ACB": {"vol": 7200, "cost": 25}, # Example: 7200 shares @ 24.5   
+    }
     # Agents Specific Keys (Defaults to Main Key)
     GEMINI_KEYS = {
         "finance": os.getenv("GEMINI_FINANCE_KEY", GEMINI_API_KEY),

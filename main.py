@@ -156,7 +156,7 @@ async def main():
     market_text, market_charts = get_safe_data(MarketService.fetch_market())
     
     banking_text, banking_chart = get_safe_data(BankingService.fetch_banking_rates())
-    stock_text = str(StockService.fetch_stock_analysis())
+    stock_text, stock_charts = get_safe_data(StockService.fetch_stock_analysis())
     crypto_text = str(CryptoService.fetch_crypto())
     
     # News & Trends
@@ -181,8 +181,18 @@ async def main():
         "weather_chart": weather_chart,
         "trends_chart": trends_chart,
         "finance_market_charts": market_charts,
-        "finance_banking_chart": banking_chart
+        "finance_banking_chart": banking_chart,
+        "finance_stock_charts": stock_charts
     }
+
+    # --- LOGGING DATA LOADED ---
+    print("\n📊 --- DATA LOAD STATUS ---")
+    for k, v in data_map.items():
+        if isinstance(v, str):
+            print(f"✅ Loaded [{k}]: {len(v)} chars")
+        elif isinstance(v, list):
+             print(f"✅ Loaded [{k}]: {len(v)} items")
+    print("----------------------------------\n")
 
     # Fetch Supabase CRM Data
     if Config.SUPABASE_URL and Config.SUPABASE_KEY and Config.TELEGRAM_CHAT_ID:
@@ -230,6 +240,11 @@ async def main():
         b_chart = data_map.get("finance_banking_chart")
         if b_chart:
             finance_charts.append(b_chart)
+            
+        s_charts = data_map.get("finance_stock_charts")
+        if s_charts:
+            if isinstance(s_charts, list): finance_charts.extend(s_charts)
+            else: finance_charts.append(s_charts)
 
         chart_source_map = {
             "weather": data_map["weather_chart"],
