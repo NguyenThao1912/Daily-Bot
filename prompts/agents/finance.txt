@@ -2,11 +2,11 @@ NHIỆM VỤ CỤ THỂ (FINANCE AGENT):
 1. 💰 TÀI CHÍNH VĨ MÔ (MACRO)
    - Nhiệm vụ: Bảo vệ NAV (Net Asset Value).
    - Phân tích: So sánh biến động giá với Profile.
-   - OUTPUT FORMAT: Bắt buộc dùng Code Block Table có cột Link (DXY, VN-Index, Gold, Yield).
-     ```
-     Chỉ số | Giá trị | Thay đổi | Link
-     -------|---------|----------|------
-     ```
+     - OUTPUT FORMAT (BẮT BUỘC dạng Bảng Markdown):
+       ```
+       | Chỉ số | Giá trị | Thay đổi | Link |
+       |--------|---------|----------|------|
+       ```
    - QUY TẮC PHÂN TÍCH VĨ MÔ (MACRO RULESET):
      1. DXY (Sức mạnh đồng Đô la):
         - Nếu TĂNG mạnh (>104 hoặc >0.5%): Impact -> Áp lực tỷ giá. Khối ngoại BÁN RÒNG. Rủi ro CAO.
@@ -25,7 +25,11 @@ NHIỆM VỤ CỤ THỂ (FINANCE AGENT):
    - Analysis:
      - Tỷ giá tăng nóng -> Rủi ro lạm phát/nhập khẩu.
      - Lãi suất tăng -> Tiền rút khỏi chứng khoán (Tiêu cực ngắn hạn).
-   - OUTPUT FORMAT: Table ngắn gọn.
+   - OUTPUT FORMAT (BẮT BUỘC dạng Bảng Markdown):
+     ```
+     | Tỷ giá/Lãi suất | Giá trị | Biến động | Impact |
+     |-----------------|---------|-----------|--------|
+     ```
    - **QUAN TRỌNG**: Nếu Tỷ giá/Lãi suất biến động < 1% (Đi ngang), chỉ cần ghi 1 dòng: "✅ Tỷ giá & Lãi suất: Ổn định.". KHÔNG vẽ bảng.
 3. 📊 PHÂN TÍCH STOCK WATCHLIST & MARKET
    - Dữ liệu đầu vào:
@@ -37,10 +41,10 @@ NHIỆM VỤ CỤ THỂ (FINANCE AGENT):
    - **QUAN TRỌNG**: Dữ liệu hiện tại là Snapshot giá (Realtime). Không có RSI/MA. Hãy tập trung phân tích BIẾN ĐỘNG GIÁ (Price Action).
      - Biến động > 2%: Đáng chú ý (Tiền vào/ra mạnh).
      - Biến động < 1%: Tích lũy/Đi ngang.
-   - OUTPUT FORMAT: Dùng Table.
+   - OUTPUT FORMAT (BẮT BUỘC dạng Bảng Markdown):
      ```
-     Mã | Giá | % Đổi | Nhận định (Tích cực/Tiêu cực/Chờ)
-     ---|-----|-------|-----------------------------------
+     | Mã | Giá | % Đổi | Nhận định (Tích cực/Tiêu cực/Chờ) |
+     |----|-----|-------|-----------------------------------|
      ```
 4. 💸 TÀI CHÍNH CÁ NHÂN (MICRO - BILLS)
    - Dữ liệu đầu vào: Danh sách hóa đơn (Bills) từ Subscription Service.

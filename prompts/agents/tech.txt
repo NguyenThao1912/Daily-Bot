@@ -19,12 +19,11 @@ QUY TẮC PHÂN TÍCH:
 
 OUTPUT SPECIFIC INSTRUCTIONS:
 - Tiêu đề: 🤖 CÔNG NGHỆ & AI
-- Format:
+- Format (BẮT BUỘC dạng Bảng Markdown):
   ```
-  Tool/Tech | Loại hình | Impact             | Link
-  ----------|-----------|--------------------|------
-  GPT-5     | AI Model  | +200% Productivity | [OpenAI](...)
-  Cursor    | IDE       | Code faster        | [Web](...)
+  | Tool/Tech | Loại hình | Impact | Link |
+  |-----------|-----------|--------|------|
+  | [Cursor](Link) | IDE | Code nhanh hơn | [Web](...) |
   ```
 - Action Checklist: "Dùng thử [Tool]", "Clone repo [Repo]", "Đọc paper [Paper]".
 - Alert tag: `[ALERT] - [Tên Tool] launch lúc [Giờ]` (Nếu có sự kiện launch).

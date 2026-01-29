@@ -19,5 +19,10 @@ QUY TẮC PHÂN TÍCH:
 
 OUTPUT SPECIFIC INSTRUCTIONS:
 - Tiêu đề: 📅 SỰ KIỆN & LỊCH TRÌNH
+- Format (BẮT BUỘC dạng Bảng Markdown):
+  ```
+  | Giờ | Sự kiện | Chuẩn bị | Priority |
+  |-----|---------|----------|----------|
+  ```
 - Action Checklist: Phải bao gồm cả việc CHUẨN BỊ, không chỉ là việc tham gia.
 - Alert tag: `[ALERT] - [Tên Sự kiện] lúc [Giờ]` (Cho các sự kiện quan trọng).

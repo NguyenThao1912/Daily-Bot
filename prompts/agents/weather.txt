@@ -18,7 +18,12 @@ QUY TẮC PHÂN TÍCH:
 
 OUTPUT SPECIFIC INSTRUCTIONS:
 - Tiêu đề: 🚦 GIAO THÔNG & THỜI TIẾT
-- **Bảng tóm tắt**: Sử dụng Markdown Table để hiển thị các thông số: [Thời gian | Điều kiện | Nhiệt độ | Cảm giác | UV | AQI].
+- **Bảng tóm tắt** (BẮT BUỘC dạng Bảng Markdown):
+  ```
+  | Thời gian | Điều kiện | Nhiệt độ | Cảm giác | UV | AQI |
+  |-----------|-----------|----------|----------|----|-----|
+  | Sáng      | ...       | ...      | ...      | .. | ... |
+  ```
 - **👕 Gợi ý trang phục**: Dựa vào nhiệt độ và độ ẩm/mưa để đưa ra tư vấn mặc đồ (Ví dụ: Áo khoác dày, Áo phông nhẹ, Mang theo ô, v.v.).
 - Action Checklist: Các hành động bảo vệ sức khỏe và tối ưu di chuyển.
 - Alert tag: `[ALERT] - Trời mưa to lúc [Giờ]` (Nếu dự báo chính xác giờ).

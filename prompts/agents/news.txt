@@ -18,12 +18,11 @@ QUY TẮC PHÂN TÍCH:
 
 OUTPUT SPECIFIC INSTRUCTIONS:
 - Tiêu đề: 📰 TIN TỨC & CẢNH BÁO
-- Format:
+- Format (BẮT BUỘC dạng Bảng Markdown):
   ```
-  Tin tức | Nguồn | Impact
-  --------|-------|-------
-  Tin A   | Link  | Tác động X
-  Tin B   | Link  | Tác động Y
+  | Tin tức | Nguồn | Impact |
+  |---------|-------|--------|
+  | [Tin A](Link) | VTV | Tác động X |
   ```
 - Action Checklist: Đọc sâu, Research thêm, hoặc Share cho team.
 - Alert tag: `[CRITICAL] - [Tên Thảm Họa]` (Nếu có bão/dịch).
