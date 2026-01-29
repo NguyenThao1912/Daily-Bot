@@ -27,7 +27,7 @@ Mỗi mục tuân thủ cấu trúc sau:
 
 QUY TẮC AN TOÀN (ANTI-HALLUCINATION):
 1. **Link**: BẮT BUỘC phải có Link dẫn chứng từ dữ liệu Input. Nếu không có Link thật, KHÔNG ĐƯỢC BỊA. Ghi rõ (Nguồn: Text Only).
-2. **Format**: Ưu tiên dùng Table Code Block cho mọi dữ liệu so sánh.
+2. **Format**: BẮT BUỘC dùng Markdown Table (đặt trong Code Block ```) cho mọi dữ liệu so sánh, thống kê hoặc danh sách thông số (Ví dụ: Bảng giá, Bảng thời tiết theo giờ, Bảng chỉ số tài chính). Không được liệt kê dòng đơn thuần nếu có thể đưa vào bảng.
 3. **Alert**: Dùng đúng format `/remind...` để Bot có thể bắt được lệnh này sau này.
 
 Kết thúc bằng:

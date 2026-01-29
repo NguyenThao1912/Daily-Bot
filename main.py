@@ -6,9 +6,12 @@ from supabase import create_client
 
 from src.config import Config
 from src.orchestrator import Orchestrator, CategoryAgent
-from src.services.data_service import DataService
-from src.services.user_service import UserService
-from src.services.crm_service import CRMService
+from src.services.finance.crypto_service import CryptoService
+from src.services.finance.market_service import MarketService
+from src.services.finance.banking_service import BankingService
+from src.services.stock.stock_service import StockService
+from src.services.social.news_service import NewsService
+from src.services.weather.weather_service import WeatherService
 from src.services.subscription_service import SubscriptionService
 
 async def save_reminders(alerts):
@@ -60,7 +63,6 @@ async def main():
     agents_map = {
         "finance": "FINANCE",
         "weather": "WEATHER & TRAFFIC",
-        "weather": "WEATHER & TRAFFIC",
         "events": "EVENTS & SCHEDULE",
         "tech": "TECHNOLOGY & AI",
         "trends": "GOOGLE TRENDS & VIRAL",
@@ -86,7 +88,49 @@ async def main():
 
     # 2. Fetch Data
     print("⏳ Fetching real-time data...")
-    data_map = await DataService.get_all_data()
+    
+    # Weather
+    weather_res = WeatherService.fetch_weather()
+    weather_text = weather_res["text"] if isinstance(weather_res, dict) else weather_res
+    weather_chart = weather_res.get("chart_path") if isinstance(weather_res, dict) else None
+    
+    # Market (CafeF)
+    market_text = MarketService.fetch_market()
+    
+    # Banking (CafeF)
+    banking_res = BankingService.fetch_banking_rates()
+    banking_text = banking_res["text"]
+    banking_chart = banking_res["chart_path"]
+    
+    # Stock (CafeF)
+    stock_text = StockService.fetch_stock_analysis()
+    
+    # Crypto
+    crypto_text = CryptoService.fetch_crypto()
+    
+    # News & Trends
+    news_text = NewsService.fetch_news("general")
+    tech_news = NewsService.fetch_news("tech")
+    trends_res = NewsService.fetch_trends()
+    trends_text = trends_res["text"]
+    trends_chart = trends_res["chart_path"]
+
+    data_map = {
+        "finance": (
+            f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
+            f"--- [STOCK WATCHLIST] ---\n{stock_text}\n"
+            f"--- [BANKING] ---\n{banking_text}\n"
+            f"--- [CRYPTO] ---\n{crypto_text}"
+        ),
+        "weather": weather_text,
+        "weather_chart": weather_chart,
+        "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.", # Placeholder
+        "tech": tech_news,
+        "news": news_text,
+        "trends": trends_text,
+        "trends_chart": trends_chart,
+        "rates_chart": banking_chart
+    }
 
     # Fetch CRM Data if DB connected
     if Config.SUPABASE_URL and Config.SUPABASE_KEY and Config.TELEGRAM_CHAT_ID:
@@ -115,11 +159,77 @@ async def main():
 
     # 3. Execute AI Pipeline
     print("🚀 AI Analysis in progress...")
-    report = await orchestrator.run_all(user_context, data_map)
+    results = await orchestrator.run_all(user_context, data_map)
     
     # 4. Send Report
     if Config.TELEGRAM_CHAT_ID:
-        await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=report, parse_mode='Markdown')
+        # Start message (Separator)
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M')
+        header = (
+            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            "🌅 *BẢN TIN CHIẾN LƯỢC MỚI*\n"
+            f"📅 _Cập nhật lúc: {now_str}_\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        try:
+            await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=header, parse_mode='Markdown')
+        except Exception as e:
+            print(f"⚠️ Header Send Error: {e}")
+            # Fallback plain text
+            await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=header.replace('*', '').replace('_', ''))
+
+        # Map charts to categories
+        chart_map = {
+            "weather": data_map.get("weather_chart"),
+            "trends": data_map.get("trends_chart"),
+            "finance": data_map.get("rates_chart")
+        }
+
+        # 1. Accumulate Content
+        full_report_parts = []
+        charts_to_send = []
+
+        for res in results:
+            category = res["category"]
+            content = res["content"]
+            full_report_parts.append(content)
+            
+            # Check for chart
+            c_path = chart_map.get(category)
+            if c_path and os.path.exists(c_path) and os.path.getsize(c_path) > 0:
+                charts_to_send.append((category, c_path))
+
+        full_report = "\n\n".join(full_report_parts)
+
+        # 2. Send Full Text Report (Chunked)
+        try:
+            if len(full_report) > 4000:
+                # Split by newline to avoid breaking words if possible, or simple chunking
+                # Simple chunking for safety:
+                for chunk in [full_report[i:i+4000] for i in range(0, len(full_report), 4000)]:
+                     await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=chunk, parse_mode='Markdown')
+            else:
+                await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=full_report, parse_mode='Markdown')
+        except Exception as e_md:
+            print(f"⚠️ Report Send Error (Markdown): {e_md} -> Fallback plain text")
+            # Last resort fallback
+            if len(full_report) > 4000:
+                 for chunk in [full_report[i:i+4000] for i in range(0, len(full_report), 4000)]:
+                     await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=chunk)
+            else:
+                 await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=full_report)
+
+        # 3. Send Charts (After report)
+        for cat, path in charts_to_send:
+            try:
+                caption = f"📊 Biểu đồ {cat.capitalize()}"
+                with open(path, 'rb') as photo:
+                    await bot.send_photo(chat_id=Config.TELEGRAM_CHAT_ID, photo=photo, caption=caption)
+            except Exception as e:
+                print(f"⚠️ Chart Send Error ({cat}): {e}")
+
+    else:
+
     else:
         print("⚠️ No TELEGRAM_CHAT_ID, skipping send.")
     
@@ -129,6 +239,15 @@ async def main():
         await save_reminders(orchestrator.alerts)
     
     print("✅ Done!")
+    
+    # 6. Cleanup Output Folder
+    try:
+        if os.path.exists("output"):
+            import shutil
+            shutil.rmtree("output")
+            print("🧹 Cleaned up 'output' folder.")
+    except Exception as e:
+        print(f"⚠️ Cleanup Error: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

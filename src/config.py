@@ -8,6 +8,7 @@ class Config:
     TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    WORKER_HOST = os.getenv("WORKER_HOST", "http://localhost:8787")
 
     # Supabase
     SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -16,13 +17,13 @@ class Config:
     # External APIs
     WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
     WEATHER_LOCATION = os.getenv("WEATHER_LOCATION", "Hanoi")
+    STOCK_WATCHLIST = os.getenv("STOCK_WATCHLIST", "FPT.VN,HPG.VN,VHM.VN,VCB.VN,MBB.VN,ACB.VN,TCB.VN,VIC.VN,^VNINDEX").split(",")
 
     # Agents Specific Keys (Defaults to Main Key)
     GEMINI_KEYS = {
         "finance": os.getenv("GEMINI_FINANCE_KEY", GEMINI_API_KEY),
         "weather": os.getenv("GEMINI_WEATHER_KEY", GEMINI_API_KEY),
         "events": os.getenv("GEMINI_EVENT_KEY", GEMINI_API_KEY),
-        "crypto": os.getenv("GEMINI_CRYPTO_KEY", GEMINI_API_KEY),
         "news": os.getenv("GEMINI_NEWS_KEY", GEMINI_API_KEY),
         "tech": os.getenv("GEMINI_TECH_KEY", GEMINI_API_KEY),
         "trends": os.getenv("GEMINI_TRENDS_KEY", GEMINI_API_KEY),

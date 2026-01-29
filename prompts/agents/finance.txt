@@ -17,7 +17,32 @@ NHIỆM VỤ CỤ THỂ (FINANCE AGENT):
         - Nếu đang Âm mà tăng mạnh về 0: Cẩn thận "Bear Steepening".
      3. VN-Index:
         - So sánh với DXY. Thường đi ngược chiều.
-2. 💸 TÀI CHÍNH CÁ NHÂN (MICRO - BILLS)
+      3. VN-Index:
+         - So sánh với DXY. Thường đi ngược chiều.
+2. 🏦 TỶ GIÁ & LÃI SUẤT (BANKING)
+   - Nhiệm vụ: Theo dõi dòng tiền.
+   - Dữ liệu: Tỷ giá USD/VND, EUR/VND và Lãi suất tiết kiệm (Big 4 + TMCP).
+   - Analysis:
+     - Tỷ giá tăng nóng -> Rủi ro lạm phát/nhập khẩu.
+     - Lãi suất tăng -> Tiền rút khỏi chứng khoán (Tiêu cực ngắn hạn).
+   - OUTPUT FORMAT: Table ngắn gọn.
+   - **QUAN TRỌNG**: Nếu Tỷ giá/Lãi suất biến động < 1% (Đi ngang), chỉ cần ghi 1 dòng: "✅ Tỷ giá & Lãi suất: Ổn định.". KHÔNG vẽ bảng.
+3. 📊 PHÂN TÍCH STOCK WATCHLIST & MARKET
+   - Dữ liệu đầu vào:
+     - [STOCK WATCHLIST]: Danh sách mã quan tâm (Giá khớp, % Thay đổi).
+     - [DẪN DẮT VN-INDEX]: Các mã trụ đang kéo/đạp thị trường.
+   - Nhiệm vụ:
+     - Nhận diện xu hướng dòng tiền thông qua "Dẫn dắt VN-Index".
+     - Đánh giá các mã trong Watchlist: Tăng/Giảm mạnh? Có đồng pha với thị trường chung?
+   - **QUAN TRỌNG**: Dữ liệu hiện tại là Snapshot giá (Realtime). Không có RSI/MA. Hãy tập trung phân tích BIẾN ĐỘNG GIÁ (Price Action).
+     - Biến động > 2%: Đáng chú ý (Tiền vào/ra mạnh).
+     - Biến động < 1%: Tích lũy/Đi ngang.
+   - OUTPUT FORMAT: Dùng Table.
+     ```
+     Mã | Giá | % Đổi | Nhận định (Tích cực/Tiêu cực/Chờ)
+     ---|-----|-------|-----------------------------------
+     ```
+4. 💸 TÀI CHÍNH CÁ NHÂN (MICRO - BILLS)
    - Dữ liệu đầu vào: Danh sách hóa đơn (Bills) từ Subscription Service.
    - Nhiệm vụ: Nhắc thanh toán đúng hạn để không bị cắt dịch vụ/phạt.
    - OUTPUT FORMAT: Dùng Table cho danh sách hóa đơn.
