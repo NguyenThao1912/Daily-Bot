@@ -75,28 +75,26 @@ class Orchestrator:
         
         print(f"🚀 Bắt đầu chạy AI Pipeline (Chế độ Song Song - Turbo Mode)...")
         
+        # Limit concurrency to 3 agents at a time to avoid Rate Limit (429)
+        semaphore = asyncio.Semaphore(3)
+
         # Helper function for individual agent task
         async def process_agent(agent):
-            raw_data = category_data.get(agent.name, "Không có dữ liệu mới.")
-            processed_categories.add(agent.name)
-            print(f"🤖 Start: {agent.name}...")
-            content = await agent.generate_impact(user_context, raw_data)
-            print(f"✅ Finish: {agent.name}")
-            return {"category": agent.name, "content": content}
+            async with semaphore:
+                raw_data = category_data.get(agent.name, "Không có dữ liệu mới.")
+                processed_categories.add(agent.name)
+                print(f"🤖 Start: {agent.name}...")
+                content = await agent.generate_impact(user_context, raw_data)
+                print(f"✅ Finish: {agent.name}")
+                return {"category": agent.name, "content": content}
 
         # Create tasks for all agents
         tasks = [process_agent(agent) for agent in self.agents]
         
-        # Run concurrently
-        # Note: CategoryAgent.safe_generate already handles Rate Limits (429) with retries
+        # Run concurrently (but bounded by Semaphore)
         results = await asyncio.gather(*tasks)
         
-        # 3. Thêm dữ liệu thô cho các danh mục không có Agent
-        for category, raw_data in category_data.items():
-            if category not in processed_categories and not category.endswith("_chart"): 
-                # Wrap in code block for safety and to avoid Markdown conflicts
-                content = f"📦 *[{category.upper()} - RAW DATA]*\n```\n{raw_data}\n```"
-                results.append({"category": category, "content": content})
+        # 3. (Deleted) Raw Data fallback removed as requested.
         
         # Extract Alerts from all results for persistence
         all_text = "\n\n".join([r["content"] for r in results])

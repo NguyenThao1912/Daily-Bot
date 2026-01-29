@@ -42,6 +42,12 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        GEMINI_FINANCE_KEY: ${{ secrets.GEMINI_FINANCE_KEY }}
+        GEMINI_WEATHER_KEY: ${{ secrets.GEMINI_WEATHER_KEY }}
+        GEMINI_EVENT_KEY: ${{ secrets.GEMINI_EVENT_KEY }}
+        GEMINI_NEWS_KEY: ${{ secrets.GEMINI_NEWS_KEY }}
+        GEMINI_TECH_KEY: ${{ secrets.GEMINI_TECH_KEY }}
+        GEMINI_TRENDS_KEY: ${{ secrets.GEMINI_TRENDS_KEY }}
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}

@@ -108,12 +108,12 @@ async def main():
 
     # 2. Register Agents
     agents_map = {
-        "finance": "FINANCE",
         "weather": "WEATHER & TRAFFIC",
-        "events": "EVENTS & SCHEDULE",
-        "tech": "TECHNOLOGY & AI",
+        "finance": "FINANCE",
+        "news": "DAILY NEWS",
         "trends": "GOOGLE TRENDS & VIRAL",
-        "news": "DAILY NEWS"
+        "tech": "TECHNOLOGY & AI",
+        "events": "EVENTS & SCHEDULE"
     }
 
     for name in agents_map.keys():
