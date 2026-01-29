@@ -18,6 +18,7 @@ from src.services.stock.stock_service import StockService
 from src.services.social.news_service import NewsService
 from src.services.weather.weather_service import WeatherService
 from src.services.subscription_service import SubscriptionService
+from src.services.calendar.lunar_service import LunarService
 
 # --- HELPER FUNCTIONS ---
 
@@ -114,7 +115,8 @@ async def main():
         "finance": "FINANCE",
         "news": "DAILY NEWS",
         "trends": "GOOGLE TRENDS & VIRAL",
-        "tech": "TECHNOLOGY & AI"
+        "tech": "TECHNOLOGY & AI",
+        "calendar": "LUNAR CALENDAR & FORTUNE"
     }
 
     for name in agents_map.keys():
@@ -162,7 +164,12 @@ async def main():
     # News & Trends
     news_text = NewsService.fetch_news("general")
     tech_news = NewsService.fetch_news("tech")
+    news_text = NewsService.fetch_news("general")
+    tech_news = NewsService.fetch_news("tech")
     trends_text, trends_chart = get_safe_data(NewsService.fetch_trends())
+    
+    # Calendar Data
+    calendar_text = str(LunarService.get_date_info())
 
     # Compile Data Map
     data_map = {
@@ -170,13 +177,17 @@ async def main():
             f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
             f"--- [STOCK WATCHLIST] ---\n{stock_text}\n"
             f"--- [BANKING] ---\n{banking_text}\n"
-            f"--- [CRYPTO] ---\n{crypto_text}"
+            f"--- [CRYPTO] ---\n{crypto_text}\n"
+            f"--- [MACRO & POLITICS] ---\n{news_text}"
         ),
         "weather": weather_text,
         "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.",
         "tech": tech_news,
         "news": news_text,
+        "tech": tech_news,
+        "news": news_text,
         "trends": trends_text,
+        "calendar": calendar_text,
         # Hidden fields for internal use/charts
         "weather_chart": weather_chart,
         "trends_chart": trends_chart,

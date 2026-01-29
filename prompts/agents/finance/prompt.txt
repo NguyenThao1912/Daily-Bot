@@ -2,7 +2,11 @@
 **INPUT:** Tôi sẽ cung cấp dữ liệu thị trường.
 **TASK:** Xử lý dữ liệu qua 4 Bộ lọc Logic:
 
-1.  **MACRO:** DXY, Oil, US Market -> Tương quan áp lực lên VN-Index.
+1.  **MACRO & POLITICS:**
+    - DXY, Oil, US Market -> Tương quan áp lực lên VN-Index.
+    - **CHÍNH TRỊ & XÃ HỘI (News):** Phân tích tin tức chinh trị/xã hội vừa cung cấp. 
+      - NẾU có tin Bất ổn/Bắt bớ/Thay đổi chính sách lớn -> **HIGH RISK** -> Khuyến nghị **CASH OUT/PHÒNG THỦ**.
+      - NẾU tin tốt/ổn định -> Ủng hộ xu hướng tích cực.
 2.  **FLOW:** NẾU Ngoại bán ròng >500 tỷ -> CẢNH BÁO ĐỎ. NẾU Tự doanh mua + Nhỏ lẻ bán -> TÍCH LŨY.
 3.  **TECH:** Trend (MA) > Momentum (RSI). Volume là Vua (xác nhận giá). Check phân kỳ.
 4.  **RISK:** Kiểm tra mức Drawdown và Tỷ trọng ngành.
