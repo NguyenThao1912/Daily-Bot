@@ -200,41 +200,31 @@ async def main():
         )
         await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=header, parse_mode='Markdown')
 
-        # Prepare Content & Charts
-        full_report_parts = []
-        charts_to_send = []
-
-        # Mapping Categories to Chart Paths
+        # Prepare Data for PDF
         chart_source_map = {
             "weather": data_map["weather_chart"],
             "trends": data_map["trends_chart"],
             "finance": data_map["rates_chart"]
         }
 
-        for res in results:
-            category = res["category"]
-            content = res["content"]
-            full_report_parts.append(content)
-            
-            # Check if this category has a chart available
-            c_path = chart_source_map.get(category)
-            if c_path and isinstance(c_path, str) and os.path.exists(c_path):
-                if os.path.getsize(c_path) > 0:
-                    charts_to_send.append((category, c_path))
+        # Generate PDF
+        print("📄 Generating PDF Report...")
+        from src.services.report.pdf_service import PDFService
+        pdf_path = PDFService.generate_report(results, chart_source_map)
 
-        full_report = "\n\n".join(full_report_parts)
-
-        # Send Text Report (Safe Chunking)
-        await send_smart_chunked_message(bot, Config.TELEGRAM_CHAT_ID, full_report, parse_mode='Markdown')
-
-        # Send Charts
-        for cat, path in charts_to_send:
-            try:
-                caption = f"📊 Biểu đồ {cat.capitalize()}"
-                with open(path, 'rb') as photo:
-                    await bot.send_photo(chat_id=Config.TELEGRAM_CHAT_ID, photo=photo, caption=caption)
-            except Exception as e:
-                print(f"⚠️ Chart Send Error ({cat}): {e}")
+        if pdf_path and os.path.exists(pdf_path):
+            await bot.send_document(
+                chat_id=Config.TELEGRAM_CHAT_ID,
+                document=open(pdf_path, 'rb'),
+                caption=f"📄 Bản tin Chiến lược Ngày {now_str}",
+                parse_mode='HTML'
+            )
+            print("✅ PDF Report sent successfully!")
+        else:
+            print("❌ Failed to generate PDF. Sending fallback text.")
+            # Fallback: Send raw text if PDF fails
+            full_report = "\n\n".join([r["content"] for r in results])
+            await send_smart_chunked_message(bot, Config.TELEGRAM_CHAT_ID, full_report, parse_mode='HTML')
 
     else:
         print("⚠️ No TELEGRAM_CHAT_ID found. Report generated but not sent.")
@@ -255,4 +245,11 @@ async def main():
         print(f"⚠️ Cleanup Error: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        print("🛑 Force Exit.")
+        import sys
+        sys.exit(0)
