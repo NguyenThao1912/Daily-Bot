@@ -20,9 +20,9 @@ OUTPUT SPECIFIC INSTRUCTIONS:
 - Tiêu đề: 📰 TIN TỨC & CẢNH BÁO
 - Format (BẮT BUỘC dạng Bảng Markdown):
   ```
-  | Tin tức | Nguồn | Impact |
-  |---------|-------|--------|
-  | [Tin A](Link) | VTV | Tác động X |
+  | Tin tức | Nguồn | Impact | Link 
+  |---------|-------|--------| --------
+  | [Tin A]| VTV | Tác động X | [Link](Link) 
   ```
 - Action Checklist: Đọc sâu, Research thêm, hoặc Share cho team.
 - Alert tag: `[CRITICAL] - [Tên Thảm Họa]` (Nếu có bão/dịch).

@@ -112,8 +112,7 @@ async def main():
         "finance": "FINANCE",
         "news": "DAILY NEWS",
         "trends": "GOOGLE TRENDS & VIRAL",
-        "tech": "TECHNOLOGY & AI",
-        "events": "EVENTS & SCHEDULE"
+        "tech": "TECHNOLOGY & AI"
     }
 
     for name in agents_map.keys():

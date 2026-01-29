@@ -84,9 +84,17 @@ class Orchestrator:
                 raw_data = category_data.get(agent.name, "Không có dữ liệu mới.")
                 processed_categories.add(agent.name)
                 print(f"🤖 Start: {agent.name}...")
-                content = await agent.generate_impact(user_context, raw_data)
-                print(f"✅ Finish: {agent.name}")
-                return {"category": agent.name, "content": content}
+                try:
+                    # Timeout after 45 seconds per agent
+                    content = await asyncio.wait_for(agent.generate_impact(user_context, raw_data), timeout=45.0)
+                    print(f"✅ Finish: {agent.name}")
+                    return {"category": agent.name, "content": content}
+                except asyncio.TimeoutError:
+                    print(f"❌ Timeout ({agent.name}): Skipping...")
+                    return {"category": agent.name, "content": f"⚠️ {agent.name}: Bỏ qua do AI treo quá lâu (>45s)."}
+                except Exception as e:
+                    print(f"❌ Error ({agent.name}): {e}")
+                    return {"category": agent.name, "content": f"⚠️ {agent.name}: Lỗi xử lý ({str(e)})."}
 
         # Create tasks for all agents
         tasks = [process_agent(agent) for agent in self.agents]

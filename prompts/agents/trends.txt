@@ -18,12 +18,12 @@ QUY TẮC PHÂN TÍCH:
 
 OUTPUT SPECIFIC INSTRUCTIONS:
 - Tiêu đề: 📈 GÓC NHÌN TRENDS (GOOGLE DATA)
-- Format (BẮT BUỘC dạng Bảng Markdown):
+- Format (BẮT BUỘC dạng Bảng Markdown, Link để riêng):
   ```
-  | Keyword | Traffic | Lý do Hot |
-  |---------|---------|-----------|
-  | [Sơn Tùng](Link) | 500k | MV Mới |
-  | [GPT-5](Link) | 100k | Tin đồn |
+  | Keyword | Traffic | Lý do | Link |
+  |---------|---------|-------|------|
+  | Sơn Tùng | 500k | MV Mới | [Xem](Link) |
+  | GPT-5 | 100k | Tin đồn | [Xem](Link) |
   ```
 - Lưu ý: Cột "Lý do Hot" viết cực ngắn (2-3 từ).
 - 🧐 **Giải mã & Hành động**: Viết ngắn gọn dưới bảng (Max 2 dòng).
