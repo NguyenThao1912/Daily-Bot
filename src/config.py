@@ -32,6 +32,7 @@ class Config:
         "news": os.getenv("GEMINI_NEWS_KEY", GEMINI_API_KEY),
         "tech": os.getenv("GEMINI_TECH_KEY", GEMINI_API_KEY),
         "trends": os.getenv("GEMINI_TRENDS_KEY", GEMINI_API_KEY),
+        "calendar": os.getenv("GEMINI_CALENDAR_KEY", GEMINI_API_KEY),
     }
 
     # Paths

@@ -76,7 +76,7 @@ class NewsService:
             return None
 
     @staticmethod
-    def fetch_trends(limit=15):
+    def fetch_trends(limit=30):
         data = NewsService._fetch_from_worker("/trends", params={"limit": limit})
         if not data or 'data' not in data:
             return {"text": "Không lấy được Google Trends.", "chart_path": None}

@@ -163,8 +163,8 @@ async def main():
     
     # News & Trends
     news_text = NewsService.fetch_news("general")
-    tech_news = NewsService.fetch_news("tech")
-    news_text = NewsService.fetch_news("general")
+    featured_news = NewsService.fetch_news("featured")
+    business_news = NewsService.fetch_news("business")
     tech_news = NewsService.fetch_news("tech")
     trends_text, trends_chart = get_safe_data(NewsService.fetch_trends())
     
@@ -178,14 +178,13 @@ async def main():
             f"--- [STOCK WATCHLIST] ---\n{stock_text}\n"
             f"--- [BANKING] ---\n{banking_text}\n"
             f"--- [CRYPTO] ---\n{crypto_text}\n"
-            f"--- [MACRO & POLITICS] ---\n{news_text}"
+            f"--- [MACRO & POLITICS] ---\n{news_text}\n"
+            f"--- [BUSINESS NEWS] ---\n{business_news}"
         ),
         "weather": weather_text,
         "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.",
         "tech": tech_news,
-        "news": news_text,
-        "tech": tech_news,
-        "news": news_text,
+        "news": f"{news_text}\n\n--- [TIN NỔI BẬT] ---\n{featured_news}",
         "trends": trends_text,
         "calendar": calendar_text,
         # Hidden fields for internal use/charts
@@ -218,7 +217,9 @@ async def main():
              print(f"⚠️ CRM Data fetch failed: {e}")
 
     # 4. AI Analysis
-    user_context = "User Context: General User interested in Finance, Tech, and Trends."
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    now_str_short = datetime.now(vn_tz).strftime('%d/%m/%Y')
+    user_context = f"User Context: General User interested in Finance, Tech, and Trends.\nTODAY'S DATE: {now_str_short}"
     print("🚀 AI Analysis in progress...")
     
     try:
