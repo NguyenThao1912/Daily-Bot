@@ -1,5 +1,5 @@
 import datetime
-from lunisolar.chinese import ChineseDate
+from lunarcalendar import Converter, Lunar
 
 class LunarService:
     @staticmethod
@@ -10,15 +10,10 @@ class LunarService:
         if date is None:
             date = datetime.datetime.now()
 
-        # Convert to Lunar Date
-        # Note: lunisolar typically handles Chinese calendar which is similar to Vietnamese
-        # but there might be 1 day difference in some years due to timezone (UTC+8 vs UTC+7).
-        # For now we use the library as is, assuming close enough for general purpose
-        # or we might need a specific offset if we want strict Vietnamese accuracy.
-        # Ideally we would use a library specifically for Vietnam or adjust.
-        # However, for 'daily bot' context, this approximation is often accepted unless it's Tet.
-        
-        lunar_date = ChineseDate.from_gregorian(date.year, date.month, date.day)
+        # Convert to Lunar Date using LunarCalendar
+        # This library supports Vietnamese lunar calendar (similar to Chinese)
+        # Time range: 1900-2100
+        lunar_date = Converter.Solar2Lunar(date)
         
         # Calculate Zodiac Hour (Giờ Hoàng Đạo)
         # This is a complex calculation based on the Day Stem/Branch.
