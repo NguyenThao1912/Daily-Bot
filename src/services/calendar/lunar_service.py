@@ -1,5 +1,5 @@
 import datetime
-from lunisolar import ChineseDate
+from lunisolar.chinese import ChineseDate
 
 class LunarService:
     @staticmethod
