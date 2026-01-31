@@ -65,3 +65,113 @@ class LunarService:
             return f"Hôm nay là {holidays[(day, month)]}"
         
         return "Không có ngày lễ lớn âm lịch trong vài ngày tới."
+    
+    @staticmethod
+    def get_upcoming_holidays(date: datetime.datetime = None, limit: int = 10):
+        """
+        Returns a list of upcoming lunar holidays with countdown days.
+        Includes both lunar and solar calendar holidays, plus monthly lunar new moon (mùng 1).
+        """
+        if date is None:
+            date = datetime.datetime.now()
+        
+        # Danh sách đầy đủ các ngày lễ quan trọng
+        # Format: (month, day, name)
+        # - Nếu month <= 12: Âm lịch
+        # - Nếu month > 12: Dương lịch (month - 12 = tháng dương)
+        holidays = [
+            # --- LỄ ÂM LỊCH ---
+            (1, 1, "Tết Nguyên Đán"),
+            (1, 10, "Ngày vía Thần Tài"),
+            (1, 15, "Rằm tháng Giêng"),
+            (3, 3, "Tết Hàn Thực"),
+            (3, 10, "Giỗ Tổ Hùng Vương"),
+            (4, 15, "Lễ Phật Đản"),
+            (5, 5, "Tết Đoan Ngọ"),
+            (7, 7, "Lễ Thất Tịch"),
+            (7, 15, "Lễ Vu Lan / Rằm tháng Bảy"),
+            (8, 15, "Tết Trung Thu"),
+            (9, 9, "Tết Trùng Cửu"),
+            (10, 15, "Tết Hạ Nguyên"),
+            (12, 23, "Tiễn ông Công ông Táo về trời"),
+            (12, 30, "Tất Niên"),
+            
+            # --- LỄ DƯƠNG LỊCH (month + 12) ---
+            (13, 1, "Tết Dương Lịch"),
+            (14, 14, "Lễ tình nhân Valentine"),
+            (14, 27, "Ngày Thầy thuốc Việt Nam"),
+            (15, 8, "Quốc tế Phụ nữ"),
+            (15, 26, "Ngày thành lập Đoàn"),
+            (16, 30, "Giải phóng miền Nam"),
+            (17, 1, "Quốc tế Lao động"),
+            (17, 19, "Ngày sinh Chủ tịch Hồ Chí Minh"),
+            (18, 1, "Quốc tế Thiếu nhi"),
+            (21, 2, "Quốc khánh 2/9"),
+            (22, 13, "Ngày Doanh nhân Việt Nam"),
+            (22, 20, "Ngày Phụ nữ Việt Nam"),
+            (23, 20, "Ngày Nhà giáo Việt Nam"),
+            (24, 25, "Lễ Giáng sinh")
+        ]
+        
+        current_lunar = Converter.Solar2Lunar(date)
+        upcoming = []
+        
+        # Add special holidays
+        for year_offset in [0, 1]:
+            target_year = current_lunar.year + year_offset
+            
+            for month, day, name in holidays:
+                try:
+                    if month <= 12:
+                        # Âm lịch
+                        holiday_lunar = Lunar(target_year, month, day, isleap=False)
+                        holiday_solar = Converter.Lunar2Solar(holiday_lunar)
+                        holiday_date = datetime.datetime(holiday_solar.year, holiday_solar.month, holiday_solar.day)
+                    else:
+                        # Dương lịch (month - 12 = tháng thực)
+                        solar_month = month - 12
+                        solar_year = date.year + year_offset
+                        holiday_date = datetime.datetime(solar_year, solar_month, day)
+                    
+                    # Only include future holidays
+                    if holiday_date > date:
+                        days_until = (holiday_date - date).days
+                        upcoming.append({
+                            "name": name,
+                            "date": holiday_date.strftime("%d/%m/%Y"),
+                            "days_until": days_until
+                        })
+                except Exception as e:
+                    # Skip invalid dates
+                    continue
+        
+        # Add monthly lunar new moon (mùng 1 hàng tháng)
+        for year_offset in [0, 1]:
+            target_year = current_lunar.year + year_offset
+            
+            for month in range(1, 13):  # 12 tháng âm lịch
+                try:
+                    # Mùng 1 của mỗi tháng
+                    first_day_lunar = Lunar(target_year, month, 1, isleap=False)
+                    first_day_solar = Converter.Lunar2Solar(first_day_lunar)
+                    first_day_date = datetime.datetime(first_day_solar.year, first_day_solar.month, first_day_solar.day)
+                    
+                    if first_day_date > date:
+                        days_until = (first_day_date - date).days
+                        
+                        # Tên tháng bằng chữ
+                        month_names = ["", "Giêng", "Hai", "Ba", "Tư", "Năm", "Sáu", 
+                                     "Bảy", "Tám", "Chín", "Mười", "Một", "Chạp"]
+                        month_name = month_names[month]
+                        
+                        upcoming.append({
+                            "name": f"Mùng 1 tháng {month_name}",
+                            "date": first_day_date.strftime("%d/%m/%Y"),
+                            "days_until": days_until
+                        })
+                except Exception as e:
+                    continue
+        
+        # Sort by days until and return top N
+        upcoming.sort(key=lambda x: x["days_until"])
+        return upcoming[:limit]

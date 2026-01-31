@@ -226,22 +226,55 @@ class PDFService:
             .chart-grid {{
                 display: flex;
                 flex-wrap: wrap;
-                justify-content: space-between;
-                gap: 15px;
+                justify-content: center;
+                gap: 20px;
                 margin-top: 20px;
                 break-inside: avoid;
             }}
             .chart-item {{
-                flex: 1 1 48%; /* 2 per row */
+                flex: 1 1 100%; /* 1 per row - full width */
                 background: #fff;
                 border: 1px solid #e0e0e0;
-                padding: 5px;
+                padding: 10px;
                 border-radius: 4px;
                 text-align: center;
-                min-width: 300px;
+                max-width: 100%;
             }}
             .chart-img {{
                 max-width: 100%; height: auto; display: block;
+            }}
+            
+            /* --- EVENT SECTION --- */
+            .event-section {{
+                background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+                border: 2px solid #f39c12;
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+                box-shadow: 0 3px 8px rgba(243, 156, 18, 0.2);
+            }}
+            .event-section h3 {{
+                color: #d35400;
+                font-size: 16pt;
+                margin-bottom: 15px;
+                font-weight: 700;
+                border-bottom: 2px solid #f39c12;
+                padding-bottom: 8px;
+            }}
+            .event-item {{
+                background: white;
+                padding: 12px 15px;
+                margin: 10px 0;
+                border-left: 4px solid #e67e22;
+                border-radius: 4px;
+                font-size: 12pt;
+                font-weight: 500;
+            }}
+            .event-time {{
+                color: #e67e22;
+                font-weight: 700;
+                font-size: 13pt;
+                margin-right: 10px;
             }}
             
             /* --- LINKS --- */
@@ -266,19 +299,19 @@ class PDFService:
         <body>
             <!-- COVER PAGE -->
             <div class="cover-page">
-                <div>
+                <div style="flex: 1; display: flex; align-items: center;">
                      <!-- Decorative Background Elements -->
-                     <div style="position: relative; z-index: 1; border-left: 8px solid #e67e22; padding-left: 25px; margin-top: 80px;">
+                     <div style="position: relative; z-index: 1; border-left: 8px solid #e67e22; padding-left: 25px;">
                         <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: white; border: none;">DAILY</h1>
                         <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: #e67e22; border: none;">BRIEFING</h1>
                         <p style="font-size: 14pt; margin-top: 15px; color: #bdc3c7; letter-spacing: 2px; text-transform: uppercase;">Intelligence Report</p>
                      </div>
                 </div>
 
-                <div style="text-align: right; z-index: 1;">
-                    <div style="font-size: 28pt; font-weight: bold;">{date_str}</div>
-                    <div style="font-size: 12pt; color: #bdc3c7;">UPDATED: {time_str}</div>
-                    <div style="margin-top: 30px; border-top: 1px solid #7f8c8d; padding-top: 15px; font-size: 10pt;">
+                <div style="text-align: right; z-index: 1; flex-shrink: 0;">
+                    <div style="font-size: 32pt; font-weight: bold; margin-bottom: 10px;">{date_str}</div>
+                    <div style="font-size: 14pt; color: #bdc3c7; margin-bottom: 20px;">UPDATED: {time_str}</div>
+                    <div style="border-top: 1px solid #7f8c8d; padding-top: 15px; font-size: 11pt;">
                         PREPARED BY <b>DAILY-BOT AI</b>
                     </div>
                 </div>

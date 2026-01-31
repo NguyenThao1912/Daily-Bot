@@ -47,6 +47,30 @@ async def send_smart_chunked_message(bot, chat_id, text, parse_mode='Markdown'):
             except Exception as e_plain:
                  print(f"❌ Failed to send message chunk: {e_plain}")
 
+async def send_event_notifications(bot, chat_id, upcoming_holidays):
+    """Send a prominent Telegram message with upcoming lunar holidays."""
+    if not upcoming_holidays:
+        return
+    
+    # Format holidays message
+    event_msg = "🔔 *SỰ KIỆN SẮP TỚI:*\n\n"
+    
+    for holiday in upcoming_holidays:
+        name = holiday.get('name', '')
+        days = holiday.get('days_until', 0)
+        date = holiday.get('date', '')
+        event_msg += f"• *{name}* - Còn {days} ngày ({date})\n"
+    
+    try:
+        await bot.send_message(
+            chat_id=chat_id,
+            text=event_msg,
+            parse_mode='Markdown'
+        )
+        print("✅ Lunar holiday notifications sent!")
+    except Exception as e:
+        print(f"⚠️ Failed to send holiday notifications: {e}")
+
 async def save_reminders(alerts):
     """Saves alerts to Supabase, correcting for Timezone and Reminder Logic."""
     if not Config.SUPABASE_URL or not Config.SUPABASE_KEY:
@@ -112,11 +136,11 @@ async def main():
     # 2. Register Agents
     agents_map = {
         "weather": "WEATHER & TRAFFIC",
+        "calendar": "LUNAR CALENDAR & FORTUNE",
         "finance": "FINANCE",
         "news": "DAILY NEWS",
         "trends": "GOOGLE TRENDS & VIRAL",
-        "tech": "TECHNOLOGY & AI",
-        "calendar": "LUNAR CALENDAR & FORTUNE"
+        "tech": "TECHNOLOGY & AI"
     }
 
     for name in agents_map.keys():
@@ -170,6 +194,7 @@ async def main():
     
     # Calendar Data
     calendar_text = str(LunarService.get_date_info())
+    upcoming_holidays = LunarService.get_upcoming_holidays()  # Get upcoming lunar holidays
 
     # Compile Data Map
     data_map = {
@@ -277,6 +302,9 @@ async def main():
                 parse_mode='HTML'
             )
             print("✅ PDF Report sent successfully!")
+            
+            # Send lunar holiday notifications
+            await send_event_notifications(bot, Config.TELEGRAM_CHAT_ID, upcoming_holidays)
         else:
             print("❌ Failed to generate PDF. Sending fallback text.")
             # Fallback: Send raw text if PDF fails
