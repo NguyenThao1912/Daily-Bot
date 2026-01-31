@@ -71,4 +71,4 @@ yarl==1.22.0
 yfinance==1.1.0
 matplotlib==3.10.0
 weasyprint==63.1
-lunisolar==2.2.6
+lunisolar==0.1.3

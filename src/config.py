@@ -24,15 +24,21 @@ class Config:
     DEFAULT_PORTFOLIO = {
         "ACB": {"vol": 7200, "cost": 25}, # Example: 7200 shares @ 24.5   
     }
+    # Helper to handle empty strings as None
+    @staticmethod
+    def _get_key(key, default):
+        val = os.getenv(key)
+        if val and val.strip(): return val
+        return default
+
     # Agents Specific Keys (Defaults to Main Key)
     GEMINI_KEYS = {
-        "finance": os.getenv("GEMINI_FINANCE_KEY", GEMINI_API_KEY),
-        "weather": os.getenv("GEMINI_WEATHER_KEY", GEMINI_API_KEY),
-        "events": os.getenv("GEMINI_EVENT_KEY", GEMINI_API_KEY),
-        "news": os.getenv("GEMINI_NEWS_KEY", GEMINI_API_KEY),
-        "tech": os.getenv("GEMINI_TECH_KEY", GEMINI_API_KEY),
-        "trends": os.getenv("GEMINI_TRENDS_KEY", GEMINI_API_KEY),
-        "calendar": os.getenv("GEMINI_CALENDAR_KEY", GEMINI_API_KEY),
+        "finance": _get_key.__func__("GEMINI_FINANCE_KEY", GEMINI_API_KEY),
+        "weather": _get_key.__func__("GEMINI_WEATHER_KEY", GEMINI_API_KEY),
+        "news": _get_key.__func__("GEMINI_NEWS_KEY", GEMINI_API_KEY),
+        "tech": _get_key.__func__("GEMINI_TECH_KEY", GEMINI_API_KEY),
+        "trends": _get_key.__func__("GEMINI_TRENDS_KEY", GEMINI_API_KEY),
+        "calendar": _get_key.__func__("GEMINI_CALENDAR_KEY", GEMINI_API_KEY),
     }
 
     # Paths
