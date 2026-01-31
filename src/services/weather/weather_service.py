@@ -24,8 +24,8 @@ class WeatherService:
             # Extract hourly data
             hours = weather_data['forecast']['forecastday'][0]['hour']
             times = [h['time'].split(' ')[1] for h in hours] # HH:MM
-            temps = [h['temp_c'] for h in hours]
-            humidities = [h['humidity'] for h in hours]
+            temps = [h.get('temp_c', 0) for h in hours]
+            humidities = [h.get('humidity', 0) for h in hours]
             
             # Create Output Dir
             output_dir = "output"

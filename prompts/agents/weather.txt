@@ -19,22 +19,26 @@ Hãy tạo một thẻ HTML `.card` với format sau:
         <th>Thời gian</th>
         <th>Thời tiết</th>
         <th>Nhiệt độ</th>
-        <th>UV/Chất lượng KK</th>
+        <th>Độ ẩm/Cảm giác</th>
+        <th>UV/AQI</th>
       </tr>
       <tr>
         <td><b>Sáng (7-9h)</b></td>
         <td>[Icon] [Tình trạng]</td>
         <td>[X]°C</td>
-        <td>UV:[Low/High]</td>
+        <td>[Hum]% / [Feels]°C</td>
+        <td>UV:[L/H]</td>
       </tr>
       <tr>
         <td><b>Trưa (11-13h)</b></td>
         <td>...</td>
         <td>...</td>
         <td>...</td>
+        <td>...</td>
       </tr>
        <tr>
         <td><b>Chiều (17-19h)</b></td>
+        <td>...</td>
         <td>...</td>
         <td>...</td>
         <td>...</td>
@@ -52,7 +56,18 @@ Hãy tạo một thẻ HTML `.card` với format sau:
     </ul>
   </div>
 
-  <!-- PHẦN 3: ALERT TAG -->
+  <!-- PHẦN 3: GỢI Ý ĐỊA ĐIỂM & TRẢI NGHIỆM -->
+  <div class="item-content">
+    <div class="sub-label"><b>🍲 Gợi ý Địa điểm & Trải nghiệm:</b></div>
+    <div style="background: #f1f8e9; padding: 12px; border-radius: 6px; color: #1b5e20; font-size: 10pt; line-height: 1.6; border-left: 4px solid #4caf50;">
+        🍴 <b>Nên ăn:</b> [Tên quán] - [Địa chỉ] ([Món đặc trưng]). <br>
+        🔗 <a href="[Link Google Maps]">Xem vị trí trên Maps</a> <br>
+        📍 <b>Hoạt động:</b> [Gợi ý địa điểm cụ thể hoặc khu vực tại {LOCATION}]. <br>
+        🔗 <a href="[Link Google Maps]">Xem vị trí trên Maps</a>
+    </div>
+  </div>
+
+  <!-- PHẦN 4: ALERT TAG -->
   <div class="alert" style="background-color: #fff3e0; color: #e65100; border-color: #ffb74d;">
     ⚠️ <b>CẢNH BÁO:</b> [Mưa to/Tắc đường/Nắng gắt] lúc [Giờ].
   </div>

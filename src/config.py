@@ -22,7 +22,7 @@ class Config:
     # Default Portfolio (Hardcoded for now as requested)
     # Format: {"Symbol": {"vol": float, "cost": float}}
     DEFAULT_PORTFOLIO = {
-        "ACB": {"vol": 7200, "cost": 25}, # Example: 7200 shares @ 24.5   
+        
     }
     # Helper to handle empty strings as None
     @staticmethod
