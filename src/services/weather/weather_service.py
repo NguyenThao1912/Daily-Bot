@@ -40,25 +40,29 @@ class WeatherService:
             ax1 = fig.add_subplot(111)
 
             # Temp on Left (Ax1)
-            color = '#e74c3c' # Red
+            color_temp = '#e74c3c' # Red
             ax1.set_xlabel('Giờ')
-            ax1.set_ylabel('Nhiệt độ (°C)', color=color)
-            ax1.plot(times, temps, color=color, marker='o', linewidth=2, label='Nhiệt độ')
-            ax1.tick_params(axis='y', labelcolor=color)
+            ax1.set_ylabel('Nhiệt độ (°C)', color=color_temp, fontweight='bold')
+            ax1.plot(times, temps, color=color_temp, marker='o', linewidth=2.5, label='Nhiệt độ', markersize=6)
+            ax1.tick_params(axis='y', labelcolor=color_temp)
             ax1.grid(True, linestyle='--', alpha=0.5)
 
             # Humidity on Right (Ax2)
             ax2 = ax1.twinx()
-            color = '#3498db'
-            ax2.set_ylabel('Độ ẩm (%)', color=color)
-            ax2.fill_between(times, humidities, color=color, alpha=0.2, label='Độ ẩm')
-            # ax2.bar... removed or kept simple
-            ax2.tick_params(axis='y', labelcolor=color)
+            color_hum = '#3498db' # Blue
+            ax2.set_ylabel('Độ ẩm (%)', color=color_hum, fontweight='bold')
+            ax2.plot(times, humidities, color=color_hum, marker='s', linewidth=2, label='Độ ẩm', linestyle='--', markersize=5)
+            ax2.tick_params(axis='y', labelcolor=color_hum)
+            
+            # Combined Legend
+            lines1, labels1 = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', frameon=True, shadow=True)
             
             # Title
             date_str = weather_data['forecast']['forecastday'][0]['date']
             location_name = weather_data['location']['name']
-            ax1.set_title(f"Diễn biến Thời tiết {location_name} - {date_str} (Nhiệt độ & Độ ẩm)")
+            ax1.set_title(f"Biểu đồ Nhiệt độ & Độ ẩm - {location_name} ({date_str})", fontsize=14, fontweight='bold', pad=20)
             
             fig.tight_layout()
             canvas.print_png(chart_path)

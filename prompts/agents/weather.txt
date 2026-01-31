@@ -42,7 +42,7 @@ Hãy tạo một thẻ HTML `.card` với format sau:
     </table>
   </div>
 
-  <!-- PHẦN 2: CHIẾN THUẬT TRANG PHỤC -->
+  <!-- PHẦN 2: TRANG PHỤC -->
   <div class="item-content">
     <div class="sub-label"><b>👕 Trang Phục:</b></div>
     <ul>
