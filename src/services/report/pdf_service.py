@@ -98,11 +98,11 @@ class PDFService:
             .cover-page {{
                 page: cover; /* Use named page 'cover' */
                 width: 210mm;
-                height: 297mm;
+                height: calc(297mm - 1px); /* Slight reduction to avoid micro-overflow */
                 position: relative;
                 background-color: #2c3e50;
                 color: white;
-                padding: 20mm 20mm 40mm 20mm;
+                padding: 20mm; /* Symmetrical padding */
                 overflow: hidden;
                 break-after: page;
                 display: flex; 

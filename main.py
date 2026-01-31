@@ -52,14 +52,21 @@ async def send_event_notifications(bot, chat_id, upcoming_holidays):
     if not upcoming_holidays:
         return
     
+    # Filter for holidays within the next 7 days
+    near_holidays = [h for h in upcoming_holidays if h.get('days_until', 0) <= 7]
+    
+    if not near_holidays:
+        return
+
     # Format holidays message
     event_msg = "🔔 *SỰ KIỆN SẮP TỚI:*\n\n"
     
-    for holiday in upcoming_holidays:
+    for holiday in near_holidays:
         name = holiday.get('name', '')
         days = holiday.get('days_until', 0)
         date = holiday.get('date', '')
-        event_msg += f"• *{name}* - Còn {days} ngày ({date})\n"
+        days_text = f"Còn {days} ngày" if days > 0 else "Hôm nay"
+        event_msg += f"• *{name}* - {days_text} ({date})\n"
     
     try:
         await bot.send_message(

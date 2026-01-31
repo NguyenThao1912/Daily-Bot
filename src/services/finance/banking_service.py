@@ -83,28 +83,23 @@ class BankingService:
             canvas = FigureCanvas(fig)
             ax = fig.add_subplot(111)
             
-            rects1 = ax.bar(x - width/2, rates_6m, width, label='6 Tháng', color='#3498db')
-            rects2 = ax.bar(x + width/2, rates_12m, width, label='12 Tháng', color='#2ecc71')
+            # Line Chart with Markers
+            ax.plot(banks, rates_6m, marker='o', label='6 Tháng', color='#3498db', linewidth=2.5, markersize=8)
+            ax.plot(banks, rates_12m, marker='s', label='12 Tháng', color='#2ecc71', linewidth=2.5, markersize=8)
 
             ax.set_ylabel('Lãi suất (%)')
             ax.set_title('So sánh Lãi suất Tiết kiệm (6M vs 12M)')
-            ax.set_xticks(x)
-            ax.set_xticklabels(banks)
             ax.legend()
-            ax.grid(True, axis='y', linestyle='--', alpha=0.5)
+            ax.grid(True, linestyle='--', alpha=0.6)
             
-            # Add labels
-            def autolabel(rects):
-                for rect in rects:
-                    height = rect.get_height()
-                    ax.annotate(f'{height}%',
-                                xy=(rect.get_x() + rect.get_width() / 2, height),
-                                xytext=(0, 3),  # 3 points vertical offset
-                                textcoords="offset points",
-                                ha='center', va='bottom', fontsize=8)
-
-            autolabel(rects1)
-            autolabel(rects2)
+            # Add labels for each point
+            for i, v in enumerate(rates_6m):
+                ax.annotate(f'{v}%', (i, v), xytext=(0, 10), textcoords='offset points', 
+                            ha='center', va='bottom', fontsize=9, color='#2980b9', fontweight='bold')
+            
+            for i, v in enumerate(rates_12m):
+                ax.annotate(f'{v}%', (i, v), xytext=(0, -20), textcoords='offset points', 
+                            ha='center', va='top', fontsize=9, color='#27ae60', fontweight='bold')
 
             fig.tight_layout()
             canvas.print_png(chart_path)
