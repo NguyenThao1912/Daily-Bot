@@ -73,7 +73,7 @@ def _default_llm_client():
     key_candidates = [
         Config.JIRA_GEMINI_API_KEY or "",
         Config.JIRA_GEMINI_API_KEY_2 or "",
-        Config.GEMINI_KEYS.get("finance") or "",
+        Config.GEMINI_FINANCE_KEY or "",
         os.getenv("GEMINI_API_KEY", ""),
     ]
     gemini_keys = list(dict.fromkeys(key for key in key_candidates if key))
