@@ -1,6 +1,6 @@
 import requests
 import os
-from src.config import Config
+from src.core.config import Config
 
 class NewsService:
     @staticmethod

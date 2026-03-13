@@ -1,5 +1,5 @@
 import requests
-from src.config import Config
+from src.core.config import Config
 
 class CryptoService:
     @staticmethod

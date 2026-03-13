@@ -1,7 +1,7 @@
 import requests
 import json
 import os
-from src.config import Config
+from src.core.config import Config
 
 class WeatherService:
     @staticmethod

@@ -1,0 +1,55 @@
+name: Run JIRA Daily Report
+
+on:
+  schedule:
+    # 8h00 Sáng Thứ 2 VN (ICT, UTC+7) = 01h00 UTC Thứ 2
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+jobs:
+  run-jira:
+    runs-on: ubuntu-latest
+    environment: GEMINI_FINANCE_KEY
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev pkg-config python3-dev libpango-1.0-0 libpangoft2-1.0-0
+
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      - name: Run JIRA service
+        env:
+          PYTHONUNBUFFERED: "1"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JIRA_TELEGRAM_CHAT_ID: ${{ secrets.JIRA_TELEGRAM_CHAT_ID }}
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_DEFAULT_PROJECT: ${{ secrets.JIRA_DEFAULT_PROJECT }}
+          JIRA_FOCUS_EPIC_KEYS: ${{ secrets.JIRA_FOCUS_EPIC_KEYS }}
+          JIRA_GEMINI_API_KEY: ${{ secrets.JIRA_GEMINI_API_KEY }}
+          JIRA_GEMINI_API_KEY_2: ${{ secrets.JIRA_GEMINI_API_KEY_2 }}
+          JIRA_GEMINI_MODEL: ${{ secrets.JIRA_GEMINI_MODEL }}
+          GEMINI_FINANCE_KEY: ${{ secrets.GEMINI_FINANCE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+        run: uv run python run_jira.py

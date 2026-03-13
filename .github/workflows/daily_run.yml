@@ -2,61 +2,52 @@ name: Run Morning Agent
 
 on:
   schedule:
-    # 6h00 Sáng VN (UTC+7) = 23h00 UTC
-    - cron: '0 23 * * *'
-  workflow_dispatch: # Cho phép chạy thủ công
+    # 6h00 Sáng VN (UTC+7) = 23h00 UTC ngày hôm trước
+    - cron: "0 23 * * *"
+  workflow_dispatch:
 
 jobs:
   run-daily:
     runs-on: ubuntu-latest
     environment: GEMINI_FINANCE_KEY
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-    - name: Install System Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libcairo2-dev pkg-config python3-dev libpango-1.0-0 libpangoft2-1.0-0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      id: venv-cache
-      with:
-        path: venv
-        key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2-dev pkg-config python3-dev libpango-1.0-0 libpangoft2-1.0-0
 
-    - name: Install dependencies
-      if: steps.venv-cache.outputs.cache-hit != 'true'
-      run: |
-        python -m venv venv
-        source venv/bin/activate
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      - name: Sync dependencies
+        run: uv sync --frozen
 
-    - name: Run Agent
-      env:
-        PYTHONUNBUFFERED: 1  # <--- THÊM DÒNG NÀY
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        GEMINI_FINANCE_KEY: ${{ secrets.GEMINI_FINANCE_KEY }}
-        GEMINI_WEATHER_KEY: ${{ secrets.GEMINI_WEATHER_KEY }}
-        GEMINI_EVENT_KEY: ${{ secrets.GEMINI_EVENT_KEY }}
-        GEMINI_NEWS_KEY: ${{ secrets.GEMINI_NEWS_KEY }}
-        GEMINI_TECH_KEY: ${{ secrets.GEMINI_TECH_KEY }}
-        GEMINI_TRENDS_KEY: ${{ secrets.GEMINI_TRENDS_KEY }}
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
-        WEATHER_LOCATION: ${{ secrets.WEATHER_LOCATION }}
-        WORKER_HOST: ${{ secrets.WORKER_HOST }}
-      run: |
-        source venv/bin/activate
-        python main.py
+      - name: Run agent
+        env:
+          PYTHONUNBUFFERED: "1"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_FINANCE_KEY: ${{ secrets.GEMINI_FINANCE_KEY }}
+          GEMINI_WEATHER_KEY: ${{ secrets.GEMINI_WEATHER_KEY }}
+          GEMINI_CALENDAR_KEY: ${{ secrets.GEMINI_CALENDAR_KEY }}
+          GEMINI_NEWS_KEY: ${{ secrets.GEMINI_NEWS_KEY }}
+          GEMINI_TECH_KEY: ${{ secrets.GEMINI_TECH_KEY }}
+          GEMINI_TRENDS_KEY: ${{ secrets.GEMINI_TRENDS_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+          WEATHER_LOCATION: ${{ secrets.WEATHER_LOCATION }}
+          WORKER_HOST: ${{ secrets.WORKER_HOST }}
+        run: uv run python main.py

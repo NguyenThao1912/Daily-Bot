@@ -27,6 +27,8 @@ venv/
 .venv/
 env/
 .env
+.uv_cache/
+.matplotlib/
 
 # Environment Variables
 .env

@@ -1,8 +1,8 @@
 import requests
 import urllib3
 from datetime import datetime
-from src.config import Config
-from src.services.watchlist_service import WatchlistService
+from src.core.config import Config
+from src.services.watchlist import WatchlistService
 import pandas as pd
 import numpy as np
 

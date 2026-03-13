@@ -1,6 +1,6 @@
 import json
 from supabase import Client
-from src.config import Config
+from src.core.config import Config
 
 class UserService:
     def __init__(self, supabase_client: Client):

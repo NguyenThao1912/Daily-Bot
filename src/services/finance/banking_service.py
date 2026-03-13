@@ -2,7 +2,7 @@ import requests
 import os
 import urllib3
 from datetime import datetime
-from src.config import Config
+from src.core.config import Config
 
 class BankingService:
     @staticmethod
