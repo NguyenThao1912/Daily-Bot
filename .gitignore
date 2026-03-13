@@ -44,3 +44,6 @@ env/
 
 # Logs
 *.log
+
+# Generated reports and charts
+output/

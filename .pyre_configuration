@@ -1,0 +1,9 @@
+{
+  "source_directories": [
+    "."
+  ],
+  "exclude": [
+    ".*/py_query/.*",
+    ".*/__pycache__/.*"
+  ]
+}
