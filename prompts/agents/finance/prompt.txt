@@ -32,6 +32,8 @@ Một HTML card gồm:
 - Một bảng `Toàn cảnh VN30` đặt ở đầu card.
   Bảng nên có các cột:
   `Mã | Close | % Change | RSI | MA20 | MA50 | Volume | Nhận xét ngắn`
+- Nếu input có bảng `Ứng viên mua ngắn hạn`, hiển thị lại thành một bảng riêng sau `Toàn cảnh VN30`.
+  Xem đây là danh sách theo dõi kỹ thuật ngắn hạn, không phải khuyến nghị chắc chắn.
 - Một phần `Tổng quan`.
 - Một phần `Mã mạnh`.
 - Một phần `Mã yếu`.

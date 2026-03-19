@@ -1,5 +1,7 @@
 import os
 import base64
+import html
+import re
 from weasyprint import HTML, CSS
 
 class PDFService:
@@ -46,6 +48,38 @@ class PDFService:
         return os.path.abspath(font_path)
 
     @staticmethod
+    def _strip_html_tags(text):
+        plain = re.sub(r"<[^>]+>", " ", text or "")
+        plain = html.unescape(plain)
+        plain = re.sub(r"\s+", " ", plain).strip()
+        return plain
+
+    @staticmethod
+    def _build_executive_summary(results):
+        priority = ["finance", "news", "weather", "trends", "tech", "calendar"]
+        labels = {
+            "finance": "Tai chinh",
+            "news": "Tin tuc",
+            "weather": "Thoi tiet",
+            "trends": "Xu huong",
+            "tech": "Cong nghe",
+            "calendar": "Lich",
+        }
+        ordered = sorted(results, key=lambda r: priority.index(r.get("category")) if r.get("category") in priority else 99)
+        summary_items = []
+        for res in ordered:
+            plain = PDFService._strip_html_tags(res.get("content", ""))
+            if not plain:
+                continue
+            sentence = re.split(r"(?<=[.!?])\s+", plain)[0].strip()
+            sentence = sentence[:220].rstrip()
+            if sentence:
+                summary_items.append((labels.get(res.get("category", ""), res.get("category", "").title()), sentence))
+            if len(summary_items) >= 5:
+                break
+        return summary_items
+
+    @staticmethod
     def generate_report(results, chart_map=None):
         """
         Generates a PDF report using WeasyPrint with Premium Magazine Style.
@@ -65,6 +99,7 @@ class PDFService:
             """
 
         section_count = len(results)
+        executive_summary = PDFService._build_executive_summary(results)
 
         # 1. Premium CSS Template
         css_string = f"""
@@ -139,8 +174,85 @@ class PDFService:
                 padding-left: 18px;
             }}
 
+            .item-content ul,
+            .item-content ol,
+            .action-highlight ul,
+            .action-highlight ol {{
+                margin: 8px 0 0;
+                padding-left: 20px;
+            }}
+
+            .item-content li,
+            .action-highlight li {{
+                margin-bottom: 8px;
+                line-height: 1.55;
+            }}
+
+            .item-content li > b:first-child,
+            .item-content li > strong:first-child,
+            .action-highlight li > b:first-child,
+            .action-highlight li > strong:first-child {{
+                display: inline-block;
+                margin-right: 8px;
+                margin-bottom: 3px;
+                padding: 2px 8px;
+                border-radius: 8px;
+                background: #fff4df !important;
+                color: var(--brand-deep) !important;
+                font-weight: 800;
+                box-shadow: none !important;
+                border: 1px solid #f5ddb8;
+            }}
+
+            .item-content li > b:first-child + *,
+            .item-content li > strong:first-child + *,
+            .action-highlight li > b:first-child + *,
+            .action-highlight li > strong:first-child + * {{
+                display: inline;
+            }}
+
+            .item-content li > div:first-child > b:first-child,
+            .item-content li > div:first-child > strong:first-child,
+            .action-highlight li > div:first-child > b:first-child,
+            .action-highlight li > div:first-child > strong:first-child {{
+                display: inline-block;
+                margin-right: 8px;
+                margin-bottom: 3px;
+                padding: 2px 8px;
+                border-radius: 8px;
+                background: #fff4df !important;
+                color: var(--brand-deep) !important;
+                font-weight: 800;
+                box-shadow: none !important;
+                border: 1px solid #f5ddb8;
+            }}
+
             .report-shell {{
                 padding: 0;
+            }}
+
+            .executive-summary {{
+                margin: 0 0 12mm;
+                padding: 14px 16px;
+                border-radius: 16px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #fff8f3, #ffffff);
+            }}
+
+            .executive-summary-title {{
+                font-size: 16pt;
+                font-weight: 800;
+                color: var(--ink);
+                margin: 0 0 8px;
+            }}
+
+            .executive-summary-list {{
+                margin: 0;
+                padding-left: 18px;
+            }}
+
+            .executive-summary-list li {{
+                margin-bottom: 6px;
             }}
 
             .cover-page {{
@@ -564,6 +676,19 @@ class PDFService:
             </div>
             <div class="report-shell">
         """
+
+        if executive_summary:
+            html_body += """
+            <div class="executive-summary">
+                <div class="executive-summary-title">Executive Summary</div>
+                <ol class="executive-summary-list">
+            """
+            for label, sentence in executive_summary:
+                html_body += f"<li><b>{html.escape(label)}:</b> {html.escape(sentence)}</li>"
+            html_body += """
+                </ol>
+            </div>
+            """
 
         # Category Pages
         for res in results:

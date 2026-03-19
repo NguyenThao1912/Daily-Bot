@@ -10,17 +10,14 @@ from typing import List, Dict, Any, Optional
 
 import requests
 
+from src.constants import VN30_TICKERS
 from src.config import Config
+from src.types import StockSnapshot
 
 logger = logging.getLogger(__name__)
 
 STOCK_CHECK_URL = "https://www.cophieu68.vn/download/_amibroker.php?type=check"
 STOCK_DOWNLOAD_URL = "https://www.cophieu68.vn/download/_amibroker.php?type=all"
-VN30_TICKERS = [
-    "ACB", "SHB", "DGC", "BID", "CTG", "FPT", "GAS", "HPG", "MBB", "MSN",
-    "MWG", "SSI", "STB", "VCB", "VIC", "VNM", "SAB", "VIB", "VJC", "PLX",
-    "VPB", "LPB", "VRE", "HDB", "BCM", "VHM", "GVR", "TPB", "TCB", "SSB",
-]
 
 class StockService:
     FIELD_ALIASES = {
@@ -194,7 +191,10 @@ class StockService:
             normalized[canonical_key] = value.strip() if isinstance(value, str) else value
 
         if normalized.get("Date"):
-            parsed = StockService._parse_date(str(normalized["Date"]))
+            raw_date = str(normalized["Date"]).strip()
+            if raw_date in {"00000000", "0", ""}:
+                normalized["Date"] = ""
+            parsed = StockService._parse_date(raw_date)
             if parsed:
                 normalized["Date"] = parsed.strftime("%Y-%m-%d")
 
@@ -233,7 +233,7 @@ class StockService:
         return {symbol: StockService._sort_records(items) for symbol, items in grouped.items()}
 
     @staticmethod
-    def _build_snapshot(symbol: str, records: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _build_snapshot(symbol: str, records: List[Dict[str, Any]]) -> Optional[StockSnapshot]:
         ordered = StockService._sort_records(records)
         if not ordered:
             return None
@@ -254,6 +254,9 @@ class StockService:
             pct_change = (change / previous_close) * 100
 
         rsi, ma20, ma50, ma200, avg_volume = StockService.calculate_technical_indicators(ordered)
+        volume_ratio = (volume / avg_volume) if avg_volume not in (None, 0) else None
+        distance_ma20 = ((close_price - ma20) / ma20 * 100) if close_price is not None and ma20 not in (None, 0) else None
+        distance_ma50 = ((close_price - ma50) / ma50 * 100) if close_price is not None and ma50 not in (None, 0) else None
 
         return {
             "symbol": symbol,
@@ -270,7 +273,90 @@ class StockService:
             "ma50": ma50,
             "ma200": ma200,
             "avg_volume": avg_volume,
+            "volume_ratio": volume_ratio,
+            "distance_ma20": distance_ma20,
+            "distance_ma50": distance_ma50,
+            "strength": StockService._classify_strength(
+                close_price=close_price,
+                pct_change=pct_change,
+                rsi=rsi,
+                volume_ratio=volume_ratio,
+                distance_ma20=distance_ma20,
+                distance_ma50=distance_ma50,
+            ),
         }
+
+    @staticmethod
+    def _classify_strength(
+        close_price: Optional[float],
+        pct_change: Optional[float],
+        rsi: Optional[float],
+        volume_ratio: Optional[float],
+        distance_ma20: Optional[float],
+        distance_ma50: Optional[float],
+    ) -> str:
+        score = 0
+        if close_price is None:
+            return "neutral"
+        if pct_change is not None:
+            if pct_change >= 1.5:
+                score += 2
+            elif pct_change <= -1.5:
+                score -= 2
+        if volume_ratio is not None:
+            if volume_ratio >= 1.5:
+                score += 1
+            elif volume_ratio < 0.8:
+                score -= 1
+        if distance_ma20 is not None:
+            score += 1 if distance_ma20 > 0 else -1
+        if distance_ma50 is not None:
+            score += 1 if distance_ma50 > 0 else -1
+        if rsi is not None:
+            if rsi >= 70:
+                score -= 1
+            elif rsi >= 55:
+                score += 1
+            elif rsi <= 35:
+                score -= 1
+
+        if score >= 3:
+            return "strong"
+        if score <= -2:
+            return "weak"
+        return "neutral"
+
+    @staticmethod
+    def _build_short_term_note(item: StockSnapshot) -> str:
+        notes = []
+        if item.get("pct_change") is not None and item["pct_change"] > 0:
+            notes.append("gia dang giu xung luc tang")
+        if item.get("volume_ratio") is not None and item["volume_ratio"] >= 1.2:
+            notes.append("dong tien vao tot")
+        if item.get("distance_ma20") is not None and item["distance_ma20"] > 0:
+            notes.append("dang nam tren MA20")
+        if item.get("rsi") is not None and 45 <= item["rsi"] <= 68:
+            notes.append("RSI con du dia")
+        return ", ".join(notes[:3]) if notes else "theo doi them"
+
+    @staticmethod
+    def _is_short_term_candidate(item: StockSnapshot) -> bool:
+        pct_change = item.get("pct_change")
+        volume_ratio = item.get("volume_ratio")
+        rsi = item.get("rsi")
+        distance_ma20 = item.get("distance_ma20")
+        distance_ma50 = item.get("distance_ma50")
+
+        if pct_change is None or volume_ratio is None or rsi is None:
+            return False
+
+        return (
+            pct_change >= 0.5
+            and volume_ratio >= 1.1
+            and 45 <= rsi <= 68
+            and (distance_ma20 is None or distance_ma20 >= 0)
+            and (distance_ma50 is None or distance_ma50 >= -2)
+        )
 
     @staticmethod
     def calculate_technical_indicators(records: List[Dict[str, Any]]) -> tuple[Optional[float], Optional[float], Optional[float], Optional[float], Optional[float]]:
@@ -371,7 +457,7 @@ class StockService:
             ",".join(target_symbols),
         )
 
-        snapshots: List[Dict[str, Any]] = []
+        snapshots: List[StockSnapshot] = []
         missing_symbols: List[str] = []
         for symbol in target_symbols:
             symbol_records = grouped_records.get(symbol)
@@ -393,22 +479,128 @@ class StockService:
                 "chart_path": None,
             }
 
-        lines = [
-            "DU LIEU VN30 TU COPHIEU68:",
-            f"Ngay giao dich gan nhat: {snapshots[0]['date']}",
-        ]
+        snapshots.sort(
+            key=lambda item: (
+                item.get("pct_change") is not None,
+                item.get("pct_change") or -9999,
+                item.get("volume_ratio") or -9999,
+            ),
+            reverse=True,
+        )
+        top_gainers = sorted(
+            [item for item in snapshots if item.get("pct_change") is not None],
+            key=lambda item: (item["pct_change"], item.get("volume_ratio") or 0),
+            reverse=True,
+        )[:5]
+        top_losers = sorted(
+            [item for item in snapshots if item.get("pct_change") is not None],
+            key=lambda item: (item["pct_change"], -(item.get("volume_ratio") or 0)),
+        )[:5]
+        top_volume = sorted(
+            [item for item in snapshots if item.get("volume_ratio") is not None],
+            key=lambda item: (item["volume_ratio"], item.get("pct_change") or 0),
+            reverse=True,
+        )[:5]
+        short_term_candidates = sorted(
+            [item for item in snapshots if StockService._is_short_term_candidate(item)],
+            key=lambda item: (
+                item.get("strength") == "strong",
+                item.get("volume_ratio") or 0,
+                item.get("pct_change") or 0,
+            ),
+            reverse=True,
+        )[:6]
+
+        rows = []
         for item in snapshots:
             close_text = f"{item['close']:.2f}" if item.get("close") is not None else "N/A"
-            change_text = f"{item['change']:+.2f}" if item.get("change") is not None else "N/A"
             pct_text = f"{item['pct_change']:+.2f}%" if item.get("pct_change") is not None else "N/A"
             rsi_text = f"{item['rsi']:.1f}" if item.get("rsi") is not None else "N/A"
             volume_text = f"{item['volume']:,}" if item.get("volume") else "0"
             ma20_text = f"{item['ma20']:.2f}" if item.get("ma20") is not None else "N/A"
             ma50_text = f"{item['ma50']:.2f}" if item.get("ma50") is not None else "N/A"
-            lines.append(
-                f"- {item['symbol']}: Close {close_text} | Change {change_text} ({pct_text}) | "
-                f"RSI {rsi_text} | MA20 {ma20_text} | MA50 {ma50_text} | Volume {volume_text}"
+            vol_ratio_text = f"{item['volume_ratio']:.2f}x" if item.get("volume_ratio") is not None else "N/A"
+            dist_ma20_text = f"{item['distance_ma20']:+.2f}%" if item.get("distance_ma20") is not None else "N/A"
+            dist_ma50_text = f"{item['distance_ma50']:+.2f}%" if item.get("distance_ma50") is not None else "N/A"
+            rows.append(
+                "<tr>"
+                f"<td><b>{item['symbol']}</b></td>"
+                f"<td>{close_text}</td>"
+                f"<td>{pct_text}</td>"
+                f"<td>{rsi_text}</td>"
+                f"<td>{ma20_text}</td>"
+                f"<td>{ma50_text}</td>"
+                f"<td>{vol_ratio_text}</td>"
+                f"<td>{dist_ma20_text}</td>"
+                f"<td>{dist_ma50_text}</td>"
+                f"<td>{item['strength']}</td>"
+                "</tr>"
             )
+
+        lines = [
+            "DU LIEU VN30 TU COPHIEU68:",
+            f"Ngay giao dich gan nhat: {snapshots[0]['date']}",
+            "BANG TOAN CANH VN30:",
+            "<table>",
+            "<tr><th>Ma</th><th>Close</th><th>% Change</th><th>RSI</th><th>MA20</th><th>MA50</th><th>VolRatio</th><th>DistMA20</th><th>DistMA50</th><th>Strength</th></tr>",
+            *rows,
+            "</table>",
+        ]
+
+        if top_gainers:
+            lines.append("<div><b>TOP TANG</b></div>")
+            lines.append("<ul>")
+            for item in top_gainers:
+                rsi_text = f"{item['rsi']:.1f}" if item.get("rsi") is not None else "N/A"
+                lines.append(
+                    f"<li><b>{item['symbol']}</b>: {item['pct_change']:+.2f}% | RSI {rsi_text}</li>"
+                )
+            lines.append("</ul>")
+
+        if top_losers:
+            lines.append("<div><b>TOP GIAM</b></div>")
+            lines.append("<ul>")
+            for item in top_losers:
+                rsi_text = f"{item['rsi']:.1f}" if item.get("rsi") is not None else "N/A"
+                lines.append(f"<li><b>{item['symbol']}</b>: {item['pct_change']:+.2f}% | RSI {rsi_text}</li>")
+            lines.append("</ul>")
+
+        if top_volume:
+            lines.append("<div><b>TOP VOLUME</b></div>")
+            lines.append("<ul>")
+            for item in top_volume:
+                vol_ratio_text = f"{item['volume_ratio']:.2f}x" if item.get("volume_ratio") is not None else "N/A"
+                volume_text = f"{item['volume']:,}" if item.get("volume") else "0"
+                lines.append(
+                    f"<li><b>{item['symbol']}</b>: Volume {volume_text} | VolRatio {vol_ratio_text} | Strength {item['strength']}</li>"
+                )
+            lines.append("</ul>")
+
+        if short_term_candidates:
+            lines.extend([
+                "<div><b>UNG VIEN MUA NGAN HAN</b></div>",
+                "<div>Luu y: day la bang ung vien ky thuat de theo doi cho luot song ngan han, khong phai khuyen nghi mua chac chan.</div>",
+                "<table>",
+                "<tr><th>Ma</th><th>% Change</th><th>RSI</th><th>VolRatio</th><th>DistMA20</th><th>Strength</th><th>Ly do theo doi</th></tr>",
+            ])
+            for item in short_term_candidates:
+                pct_text = f"{item['pct_change']:+.2f}%" if item.get("pct_change") is not None else "N/A"
+                rsi_text = f"{item['rsi']:.1f}" if item.get("rsi") is not None else "N/A"
+                vol_ratio_text = f"{item['volume_ratio']:.2f}x" if item.get("volume_ratio") is not None else "N/A"
+                dist_ma20_text = f"{item['distance_ma20']:+.2f}%" if item.get("distance_ma20") is not None else "N/A"
+                note_text = StockService._build_short_term_note(item)
+                lines.append(
+                    "<tr>"
+                    f"<td><b>{item['symbol']}</b></td>"
+                    f"<td>{pct_text}</td>"
+                    f"<td>{rsi_text}</td>"
+                    f"<td>{vol_ratio_text}</td>"
+                    f"<td>{dist_ma20_text}</td>"
+                    f"<td>{item['strength']}</td>"
+                    f"<td>{note_text}</td>"
+                    "</tr>"
+                )
+            lines.append("</table>")
 
         if missing_symbols:
             lines.append("Ma VN30 khong tim thay trong goi du lieu: " + ", ".join(sorted(set(missing_symbols))))

@@ -1,4 +1,5 @@
 import asyncio
+import html
 import re
 from datetime import datetime
 from typing import List, Dict
@@ -113,6 +114,7 @@ class Orchestrator:
                 res["content"] = content.replace("```html", "").replace("```", "").strip()
             elif "```" in content:
                 res["content"] = content.replace("```", "").strip()
+            res["content"] = self._normalize_agent_html(res.get("category", "unknown"), res.get("content", ""))
         
         # 3. (Deleted) Raw Data fallback removed as requested.
         
@@ -121,6 +123,35 @@ class Orchestrator:
         self.alerts = self.extract_alerts(all_text)
         
         return results
+
+    def _normalize_agent_html(self, category: str, content: str) -> str:
+        cleaned = (content or "").strip()
+        if not cleaned:
+            return self._build_fallback_card(category, "Khong co noi dung tu agent.")
+
+        if cleaned.startswith("⚠️") or cleaned.startswith("❌"):
+            return self._build_fallback_card(category, cleaned)
+
+        if "<div" in cleaned and "</div>" in cleaned:
+            if 'class="card"' not in cleaned:
+                return self._build_fallback_card(category, self._strip_tags(cleaned))
+            return cleaned
+
+        return self._build_fallback_card(category, cleaned)
+
+    def _build_fallback_card(self, category: str, text: str) -> str:
+        safe_text = html.escape(text or "Khong co du lieu.")
+        title = html.escape(category.upper())
+        return (
+            f'<div class="card">'
+            f'<div class="item-title">{title}</div>'
+            f'<div class="item-content"><div class="sub-label"><b>Noi dung</b></div>'
+            f'<div>{safe_text}</div></div>'
+            f'</div>'
+        )
+
+    def _strip_tags(self, text: str) -> str:
+        return re.sub(r"<[^>]+>", " ", text or "").strip()
 
     def extract_alerts(self, content: str) -> List[Dict]:
         """

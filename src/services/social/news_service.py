@@ -4,17 +4,13 @@ import xml.etree.ElementTree as ET
 
 import requests
 
+from src.constants import GOOGLE_NEWS_QUERIES
 from src.config import Config
+from src.types import NewsEntry
 
 class NewsService:
     GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
     GOOGLE_NEWS_TOP_URL = "https://news.google.com/rss"
-    NEWS_QUERIES = {
-        "general": "Vietnam OR world news when:1d",
-        "featured": "Vietnam headlines OR breaking news when:1d",
-        "business": "Vietnam business OR economy OR market when:1d",
-        "tech": "AI OR technology OR startup OR software when:1d",
-    }
 
     @staticmethod
     def _fetch_from_worker(path, params=None):
@@ -38,7 +34,7 @@ class NewsService:
 
     @staticmethod
     def _build_google_news_url(news_type: str, limit: int) -> str:
-        query = NewsService.NEWS_QUERIES.get(news_type, NewsService.NEWS_QUERIES["general"])
+        query = GOOGLE_NEWS_QUERIES.get(news_type, GOOGLE_NEWS_QUERIES["general"])
         params = {
             "q": query,
             "hl": "vi",
@@ -49,7 +45,7 @@ class NewsService:
         return f"{base_url}&num={limit}"
 
     @staticmethod
-    def _fetch_google_news(news_type="general", limit=20):
+    def _fetch_google_news(news_type="general", limit=20) -> List[NewsEntry]:
         try:
             url = NewsService._build_google_news_url(news_type, limit)
             response = requests.get(url, timeout=20)
@@ -89,7 +85,7 @@ class NewsService:
             return []
 
     @staticmethod
-    def _fetch_google_top_news(limit=20):
+    def _fetch_google_top_news(limit=20) -> List[NewsEntry]:
         try:
             params = {"hl": "vi", "gl": "VN", "ceid": "VN:vi"}
             url = f"{NewsService.GOOGLE_NEWS_TOP_URL}?{urllib.parse.urlencode(params)}"

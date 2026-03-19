@@ -5,9 +5,11 @@ import asyncio
 import shutil
 import pytz
 from datetime import datetime
+from typing import Any, Dict, Tuple
 from telegram import Bot
 
 # --- PROJECT IMPORTS ---
+from src.constants import AGENT_LABELS
 from src.config import Config
 from src.orchestrator import Orchestrator, CategoryAgent
 from src.services.finance.crypto_service import CryptoService
@@ -17,14 +19,190 @@ from src.services.stock.stock_service import StockService
 from src.services.social.news_service import NewsService
 from src.services.weather.weather_service import WeatherService
 from src.services.calendar.lunar_service import LunarService
+from src.types import ReportContext, ServicePayload
 
 # --- HELPER FUNCTIONS ---
 
-def get_safe_data(service_res):
+def get_safe_data(service_res: Any) -> Tuple[str, Any]:
     """Safely extracts text and chart_path from service response to avoid crashes."""
     if isinstance(service_res, dict):
         return service_res.get("text", "Dữ liệu không khả dụng"), service_res.get("chart_path", None)
     return str(service_res), None
+
+
+def load_base_prompt() -> str | None:
+    try:
+        with open(Config.PROMPT_BASE, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        print(f"❌ Base prompt not found at {Config.PROMPT_BASE}")
+        return None
+
+
+def build_agent_prompt(base_prompt: str, agent_name: str) -> str:
+    prompt_path = os.path.join(Config.PROMPTS_DIR, f"{agent_name}.txt")
+    prompt_folder_path = os.path.join(Config.PROMPTS_DIR, agent_name, "prompt.txt")
+
+    specific_prompt = ""
+    if os.path.exists(prompt_path):
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                specific_prompt = f.read()
+        except Exception as e:
+            print(f"⚠️ Read error for {agent_name}.txt: {e}")
+    elif os.path.exists(prompt_folder_path):
+        try:
+            with open(prompt_folder_path, "r", encoding="utf-8") as f:
+                specific_prompt = f.read()
+        except Exception as e:
+            print(f"⚠️ Read error for {agent_name}/prompt.txt: {e}")
+    else:
+        print(f"⚠️ Specific prompt missing for {agent_name}, using base only.")
+
+    return f"{base_prompt}\n\n{specific_prompt}"
+
+
+def register_agents(orchestrator: Orchestrator, base_prompt: str) -> None:
+    for name in AGENT_LABELS.keys():
+        api_key = Config.GEMINI_KEYS.get(name)
+        if api_key:
+            full_prompt = build_agent_prompt(base_prompt, name)
+            orchestrator.add_agent(CategoryAgent(name, api_key, full_prompt))
+        else:
+            print(f"⚠️ No API Key for agent: {name}")
+
+
+def fetch_report_context() -> ReportContext:
+    print("⏳ Fetching real-time data...")
+
+    weather_text, weather_chart = get_safe_data(WeatherService.fetch_weather())
+    market_text, market_charts = get_safe_data(MarketService.fetch_market())
+    banking_text, banking_chart = get_safe_data(BankingService.fetch_banking_rates())
+    stock_text, stock_charts = get_safe_data(StockService.fetch_stock_analysis())
+    crypto_text = str(CryptoService.fetch_crypto())
+
+    news_text = NewsService.fetch_news("general")
+    featured_news = NewsService.fetch_news("featured")
+    business_news = NewsService.fetch_news("business")
+    tech_news = NewsService.fetch_news("tech")
+    trends_text, trends_chart = get_safe_data(NewsService.fetch_trends())
+
+    calendar_text = str(LunarService.get_date_info())
+    upcoming_holidays = LunarService.get_upcoming_holidays()
+
+    data_map = {
+        "finance": (
+            f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
+            f"--- [VN30 STOCKS] ---\n{stock_text}\n"
+            f"--- [BANKING] ---\n{banking_text}\n"
+            f"--- [CRYPTO] ---\n{crypto_text}\n"
+            f"--- [MACRO & POLITICS] ---\n{news_text}\n"
+            f"--- [BUSINESS NEWS] ---\n{business_news}"
+        ),
+        "weather": weather_text,
+        "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.",
+        "tech": tech_news,
+        "news": f"{news_text}\n\n--- [TIN NỔI BẬT] ---\n{featured_news}",
+        "trends": trends_text,
+        "calendar": calendar_text,
+        "weather_chart": weather_chart,
+        "trends_chart": trends_chart,
+        "finance_market_charts": market_charts,
+        "finance_banking_chart": banking_chart,
+        "finance_stock_charts": stock_charts
+    }
+
+    print_data_load_status(data_map, stock_text, stock_charts)
+    return {"data_map": data_map, "upcoming_holidays": upcoming_holidays}
+
+
+def print_data_load_status(data_map: Dict[str, Any], stock_text: str, stock_charts: Any) -> None:
+    print("\n📊 --- DATA LOAD STATUS ---")
+    for k, v in data_map.items():
+        if isinstance(v, str):
+            print(f"✅ Loaded [{k}]: {len(v)} chars")
+        elif isinstance(v, list):
+            print(f"✅ Loaded [{k}]: {len(v)} items")
+        elif v:
+            print(f"✅ Loaded [{k}]: available")
+        else:
+            print(f"⚠️ Loaded [{k}]: empty")
+
+    stock_preview = stock_text[:220].replace("\n", " ")
+    print(f"✅ Loaded [finance_stock_text]: {len(stock_text)} chars")
+    print(f"🔎 [finance_stock_preview]: {stock_preview}...")
+    if isinstance(stock_charts, list):
+        print(f"✅ Loaded [finance_stock_charts]: {len(stock_charts)} items")
+    elif stock_charts:
+        print("✅ Loaded [finance_stock_charts]: available")
+    else:
+        print("⚠️ Loaded [finance_stock_charts]: empty")
+    print("----------------------------------\n")
+
+
+def build_user_context() -> str:
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    now_str_short = datetime.now(vn_tz).strftime('%d/%m/%Y')
+    return f"User Context: General User interested in Finance, Tech, and Trends.\nTODAY'S DATE: {now_str_short}"
+
+
+async def send_report(bot: Bot, results, data_map: Dict[str, Any], upcoming_holidays) -> None:
+    if not Config.TELEGRAM_CHAT_ID:
+        print("⚠️ No TELEGRAM_CHAT_ID found. Report generated but not sent.")
+        return
+
+    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+    now_str = datetime.now(vn_tz).strftime('%d/%m/%Y %H:%M')
+    header = (
+        "━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "🌅 *BẢN TIN CHIẾN LƯỢC MỚI*\n"
+        f"📅 _Cập nhật lúc: {now_str}_\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━"
+    )
+    await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=header, parse_mode='Markdown')
+
+    finance_charts = []
+    m_charts = data_map.get("finance_market_charts")
+    if m_charts:
+        if isinstance(m_charts, list):
+            finance_charts.extend(m_charts)
+        else:
+            finance_charts.append(m_charts)
+
+    b_chart = data_map.get("finance_banking_chart")
+    if b_chart:
+        finance_charts.append(b_chart)
+
+    s_charts = data_map.get("finance_stock_charts")
+    if s_charts:
+        if isinstance(s_charts, list):
+            finance_charts.extend(s_charts)
+        else:
+            finance_charts.append(s_charts)
+
+    chart_source_map = {
+        "weather": data_map["weather_chart"],
+        "trends": data_map["trends_chart"],
+        "finance": finance_charts
+    }
+
+    print("📄 Generating PDF Report...")
+    from src.services.report.pdf_service import PDFService
+    pdf_path = PDFService.generate_report(results, chart_source_map)
+
+    if pdf_path and os.path.exists(pdf_path):
+        await bot.send_document(
+            chat_id=Config.TELEGRAM_CHAT_ID,
+            document=open(pdf_path, 'rb'),
+            caption=f"📄 Bản tin Chiến lược Ngày {now_str}",
+            parse_mode='HTML'
+        )
+        print("✅ PDF Report sent successfully!")
+        await send_event_notifications(bot, Config.TELEGRAM_CHAT_ID, upcoming_holidays)
+    else:
+        print("❌ Failed to generate PDF. Sending fallback text.")
+        full_report = "\n\n".join([r["content"] for r in results])
+        await send_smart_chunked_message(bot, Config.TELEGRAM_CHAT_ID, full_report, parse_mode='HTML')
 
 async def send_smart_chunked_message(bot, chat_id, text, parse_mode='Markdown'):
     """Splits long messages and handles Markdown errors gracefully."""
@@ -79,136 +257,22 @@ async def send_event_notifications(bot, chat_id, upcoming_holidays):
 # --- MAIN FLOW ---
 
 async def main():
-    # 1. Setup & Checks
     if not Config.TELEGRAM_BOT_TOKEN:
         print("❌ Missing TELEGRAM_BOT_TOKEN. Check .env or Secrets.")
         return
 
     bot = Bot(token=Config.TELEGRAM_BOT_TOKEN)
     orchestrator = Orchestrator(bot)
-    
-    # Load Base Prompt
-    try:
-        with open(Config.PROMPT_BASE, "r", encoding="utf-8") as f:
-            base_prompt = f.read()
-    except FileNotFoundError:
-        print(f"❌ Base prompt not found at {Config.PROMPT_BASE}")
+
+    base_prompt = load_base_prompt()
+    if not base_prompt:
         return
 
-    # 2. Register Agents
-    agents_map = {
-        "weather": "WEATHER & TRAFFIC",
-        "calendar": "LUNAR CALENDAR & FORTUNE",
-        "finance": "FINANCE",
-        "news": "DAILY NEWS",
-        "trends": "GOOGLE TRENDS & VIRAL",
-        "tech": "TECHNOLOGY & AI"
-    }
-
-    for name in agents_map.keys():
-        api_key = Config.GEMINI_KEYS.get(name)
-        if api_key:
-            # Locate Prompt
-            prompt_path = os.path.join(Config.PROMPTS_DIR, f"{name}.txt")
-            prompt_folder_path = os.path.join(Config.PROMPTS_DIR, name, "prompt.txt")
-            
-            specific_prompt = ""
-            if os.path.exists(prompt_path):
-                try:
-                    with open(prompt_path, "r", encoding="utf-8") as f:
-                        specific_prompt = f.read()
-                except Exception as e:
-                    print(f"⚠️ Read error for {name}.txt: {e}")
-            elif os.path.exists(prompt_folder_path):
-                try:
-                    with open(prompt_folder_path, "r", encoding="utf-8") as f:
-                        specific_prompt = f.read()
-                except Exception as e:
-                    print(f"⚠️ Read error for {name}/prompt.txt: {e}")
-            else:
-                 print(f"⚠️ Specific prompt missing for {name}, using base only.")
-
-            full_prompt = f"{base_prompt}\n\n{specific_prompt}"
-            orchestrator.add_agent(CategoryAgent(name, api_key, full_prompt))
-        else:
-            print(f"⚠️ No API Key for agent: {name}")
-
-    # 3. Fetch Data (Safe Mode)
-    print("⏳ Fetching real-time data...")
-
-    # Fetching with safe extraction
-    # Fetching with safe extraction
-    weather_text, weather_chart = get_safe_data(WeatherService.fetch_weather())
-    
-    # Market now returns Dict with chart_path as LIST
-    market_text, market_charts = get_safe_data(MarketService.fetch_market())
-    
-    banking_text, banking_chart = get_safe_data(BankingService.fetch_banking_rates())
-    stock_text, stock_charts = get_safe_data(StockService.fetch_stock_analysis())
-    crypto_text = str(CryptoService.fetch_crypto())
-    
-    # News & Trends
-    news_text = NewsService.fetch_news("general")
-    featured_news = NewsService.fetch_news("featured")
-    business_news = NewsService.fetch_news("business")
-    tech_news = NewsService.fetch_news("tech")
-    trends_text, trends_chart = get_safe_data(NewsService.fetch_trends())
-    
-    # Calendar Data
-    calendar_text = str(LunarService.get_date_info())
-    upcoming_holidays = LunarService.get_upcoming_holidays()  # Get upcoming lunar holidays
-
-    # Compile Data Map
-    data_map = {
-        "finance": (
-            f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
-            f"--- [VN30 STOCKS] ---\n{stock_text}\n"
-            f"--- [BANKING] ---\n{banking_text}\n"
-            f"--- [CRYPTO] ---\n{crypto_text}\n"
-            f"--- [MACRO & POLITICS] ---\n{news_text}\n"
-            f"--- [BUSINESS NEWS] ---\n{business_news}"
-        ),
-        "weather": weather_text,
-        "events": "Họp đối tác lúc 10:30, Deadline báo cáo quý lúc 17:00.",
-        "tech": tech_news,
-        "news": f"{news_text}\n\n--- [TIN NỔI BẬT] ---\n{featured_news}",
-        "trends": trends_text,
-        "calendar": calendar_text,
-        # Hidden fields for internal use/charts
-        "weather_chart": weather_chart,
-        "trends_chart": trends_chart,
-        "finance_market_charts": market_charts,
-        "finance_banking_chart": banking_chart,
-        "finance_stock_charts": stock_charts
-    }
-
-    # --- LOGGING DATA LOADED ---
-    print("\n📊 --- DATA LOAD STATUS ---")
-    for k, v in data_map.items():
-        if isinstance(v, str):
-            print(f"✅ Loaded [{k}]: {len(v)} chars")
-        elif isinstance(v, list):
-             print(f"✅ Loaded [{k}]: {len(v)} items")
-        elif v:
-             print(f"✅ Loaded [{k}]: available")
-        else:
-             print(f"⚠️ Loaded [{k}]: empty")
-
-    stock_preview = stock_text[:220].replace("\n", " ")
-    print(f"✅ Loaded [finance_stock_text]: {len(stock_text)} chars")
-    print(f"🔎 [finance_stock_preview]: {stock_preview}...")
-    if isinstance(stock_charts, list):
-        print(f"✅ Loaded [finance_stock_charts]: {len(stock_charts)} items")
-    elif stock_charts:
-        print("✅ Loaded [finance_stock_charts]: available")
-    else:
-        print("⚠️ Loaded [finance_stock_charts]: empty")
-    print("----------------------------------\n")
-
-    # 4. AI Analysis
-    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    now_str_short = datetime.now(vn_tz).strftime('%d/%m/%Y')
-    user_context = f"User Context: General User interested in Finance, Tech, and Trends.\nTODAY'S DATE: {now_str_short}"
+    register_agents(orchestrator, base_prompt)
+    context = fetch_report_context()
+    data_map = context["data_map"]
+    upcoming_holidays = context["upcoming_holidays"]
+    user_context = build_user_context()
     print("🚀 AI Analysis in progress...")
     
     try:
@@ -217,66 +281,7 @@ async def main():
         print(f"❌ Orchestrator Error: {e}")
         return
 
-    # 5. Send Report
-    if Config.TELEGRAM_CHAT_ID:
-        # Header
-        vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-        now_str = datetime.now(vn_tz).strftime('%d/%m/%Y %H:%M')
-        header = (
-            "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            "🌅 *BẢN TIN CHIẾN LƯỢC MỚI*\n"
-            f"📅 _Cập nhật lúc: {now_str}_\n"
-            "━━━━━━━━━━━━━━━━━━━━━━━━"
-        )
-        await bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=header, parse_mode='Markdown')
-
-        # Prepare Data for PDF
-        # Aggregate Finance Charts
-        finance_charts = []
-        m_charts = data_map.get("finance_market_charts")
-        if m_charts:
-            if isinstance(m_charts, list): finance_charts.extend(m_charts)
-            else: finance_charts.append(m_charts)
-        
-        b_chart = data_map.get("finance_banking_chart")
-        if b_chart:
-            finance_charts.append(b_chart)
-            
-        s_charts = data_map.get("finance_stock_charts")
-        if s_charts:
-            if isinstance(s_charts, list): finance_charts.extend(s_charts)
-            else: finance_charts.append(s_charts)
-
-        chart_source_map = {
-            "weather": data_map["weather_chart"],
-            "trends": data_map["trends_chart"],
-            "finance": finance_charts
-        }
-
-        # Generate PDF
-        print("📄 Generating PDF Report...")
-        from src.services.report.pdf_service import PDFService
-        pdf_path = PDFService.generate_report(results, chart_source_map)
-
-        if pdf_path and os.path.exists(pdf_path):
-            await bot.send_document(
-                chat_id=Config.TELEGRAM_CHAT_ID,
-                document=open(pdf_path, 'rb'),
-                caption=f"📄 Bản tin Chiến lược Ngày {now_str}",
-                parse_mode='HTML'
-            )
-            print("✅ PDF Report sent successfully!")
-            
-            # Send lunar holiday notifications
-            await send_event_notifications(bot, Config.TELEGRAM_CHAT_ID, upcoming_holidays)
-        else:
-            print("❌ Failed to generate PDF. Sending fallback text.")
-            # Fallback: Send raw text if PDF fails
-            full_report = "\n\n".join([r["content"] for r in results])
-            await send_smart_chunked_message(bot, Config.TELEGRAM_CHAT_ID, full_report, parse_mode='HTML')
-
-    else:
-        print("⚠️ No TELEGRAM_CHAT_ID found. Report generated but not sent.")
+    await send_report(bot, results, data_map, upcoming_holidays)
 
     print("✅ Process Completed!")
 

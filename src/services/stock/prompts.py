@@ -18,6 +18,11 @@ Cấu trúc bắt buộc:
   `Mã | Close | % Change | RSI | MA20 | MA50 | Volume | Ghi chú`
 - Nếu có mã thiếu một số chỉ số, vẫn giữ mã đó trong bảng và ghi `N/A`.
 
+## Ứng viên mua ngắn hạn
+- Nếu dữ liệu có phần ứng viên mua ngắn hạn, lập thêm một bảng riêng.
+- Xem đây là danh sách theo dõi cho lướt sóng ngắn hạn dựa trên tín hiệu kỹ thuật, không được viết như khuyến nghị chắc chắn.
+- Mỗi mã nên có lý do ngắn: xung lực giá, khối lượng, vị trí so với MA, hoặc RSI còn dư địa.
+
 ## Tổng quan
 - Nhận định chung về VN30 trong ngày.
 - Nêu độ rộng tăng/giảm, nhóm ngành hoặc cổ phiếu nổi bật, và trạng thái dòng tiền.
@@ -39,7 +44,7 @@ Cấu trúc bắt buộc:
 - Nói rõ nên theo dõi gì trong phiên tới, nhóm nào đáng chú ý, và chỗ nào nên thận trọng.
 
 Ràng buộc:
-- Không bỏ qua bất kỳ mục nào trong 6 mục trên.
+- Không bỏ qua bất kỳ mục nào trong 7 mục trên nếu dữ liệu có đủ.
 - Bảng VN30 phải đứng đầu báo cáo.
 - Không chỉ liệt kê mã; mỗi mục phải có nhận định tổng hợp.
 - Nếu dữ liệu một phần không đủ, vẫn giữ nguyên cấu trúc và ghi rõ “dữ liệu chưa đủ”.
