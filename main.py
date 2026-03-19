@@ -162,7 +162,7 @@ async def main():
     data_map = {
         "finance": (
             f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
-            f"--- [STOCK WATCHLIST] ---\n{stock_text}\n"
+            f"--- [VN30 STOCKS] ---\n{stock_text}\n"
             f"--- [BANKING] ---\n{banking_text}\n"
             f"--- [CRYPTO] ---\n{crypto_text}\n"
             f"--- [MACRO & POLITICS] ---\n{news_text}\n"
@@ -189,6 +189,20 @@ async def main():
             print(f"✅ Loaded [{k}]: {len(v)} chars")
         elif isinstance(v, list):
              print(f"✅ Loaded [{k}]: {len(v)} items")
+        elif v:
+             print(f"✅ Loaded [{k}]: available")
+        else:
+             print(f"⚠️ Loaded [{k}]: empty")
+
+    stock_preview = stock_text[:220].replace("\n", " ")
+    print(f"✅ Loaded [finance_stock_text]: {len(stock_text)} chars")
+    print(f"🔎 [finance_stock_preview]: {stock_preview}...")
+    if isinstance(stock_charts, list):
+        print(f"✅ Loaded [finance_stock_charts]: {len(stock_charts)} items")
+    elif stock_charts:
+        print("✅ Loaded [finance_stock_charts]: available")
+    else:
+        print("⚠️ Loaded [finance_stock_charts]: empty")
     print("----------------------------------\n")
 
     # 4. AI Analysis

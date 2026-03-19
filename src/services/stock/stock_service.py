@@ -4,6 +4,7 @@ import io
 import csv
 import logging
 import os
+import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -15,8 +16,31 @@ logger = logging.getLogger(__name__)
 
 STOCK_CHECK_URL = "https://www.cophieu68.vn/download/_amibroker.php?type=check"
 STOCK_DOWNLOAD_URL = "https://www.cophieu68.vn/download/_amibroker.php?type=all"
+VN30_TICKERS = [
+    "ACB", "SHB", "DGC", "BID", "CTG", "FPT", "GAS", "HPG", "MBB", "MSN",
+    "MWG", "SSI", "STB", "VCB", "VIC", "VNM", "SAB", "VIB", "VJC", "PLX",
+    "VPB", "LPB", "VRE", "HDB", "BCM", "VHM", "GVR", "TPB", "TCB", "SSB",
+]
 
 class StockService:
+    FIELD_ALIASES = {
+        "ticker": "Ticker",
+        "symbol": "Ticker",
+        "<ticker>": "Ticker",
+        "date": "Date",
+        "<dtyyyymmdd>": "Date",
+        "open": "Open",
+        "<open>": "Open",
+        "high": "High",
+        "<high>": "High",
+        "low": "Low",
+        "<low>": "Low",
+        "close": "Close",
+        "<close>": "Close",
+        "volume": "Volume",
+        "<volume>": "Volume",
+    }
+
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
         raw = (symbol or "").strip().upper()
@@ -101,27 +125,83 @@ class StockService:
                 if not file_names:
                     logger.error("Zip file is empty")
                     return []
-                
-                csv_filename = file_names[0]
-                with z.open(csv_filename) as f:
-                    content = f.read().decode('utf-8')
-                    # Format cophieu68 chuẩn: Ticker,Date,Open,High,Low,Close,Volume
-                    lines = content.strip().split('\n')
-                    if not lines:
-                        return []
-                    
-                    first_line = lines[0].lower()
-                    if 'ticker' in first_line or 'symbol' in first_line:
-                        reader = csv.DictReader(io.StringIO(content))
-                    else:
-                        fieldnames = ['Ticker', 'Date', 'Open', 'High', 'Low', 'Close', 'Volume']
-                        reader = csv.DictReader(io.StringIO(content), fieldnames=fieldnames)
-                    
-                    for row in reader:
-                        results.append(row)
+
+                for file_name in file_names:
+                    if file_name.endswith("/") or "__MACOSX" in file_name:
+                        continue
+
+                    with z.open(file_name) as f:
+                        raw_bytes = f.read()
+                        content = None
+                        for encoding in ("utf-8-sig", "utf-8", "latin-1"):
+                            try:
+                                content = raw_bytes.decode(encoding)
+                                break
+                            except UnicodeDecodeError:
+                                continue
+
+                        if not content:
+                            logger.warning(f"Skip undecodable file in zip: {file_name}")
+                            continue
+
+                        lines = [line for line in content.strip().splitlines() if line.strip()]
+                        if not lines:
+                            continue
+
+                        reader = StockService._build_csv_reader(content)
+                        file_rows = 0
+                        for row in reader:
+                            normalized_row = StockService._normalize_record(row)
+                            if not normalized_row.get("Ticker") or not normalized_row.get("Date"):
+                                continue
+                            results.append(normalized_row)
+                            file_rows += 1
+
+                        logger.info(f"Processed {file_rows} rows from {file_name}")
         except Exception as e:
             logger.error(f"Error processing stock zip/csv: {e}")
         return results
+
+    @staticmethod
+    def _build_csv_reader(content: str):
+        content = StockService._repair_cophieu68_content(content)
+        first_line = content.strip().splitlines()[0].lower()
+        if "ticker" in first_line or "symbol" in first_line or "<ticker>" in first_line:
+            return csv.DictReader(io.StringIO(content))
+
+        fieldnames = ["Ticker", "Date", "Open", "High", "Low", "Close", "Volume"]
+        return csv.DictReader(io.StringIO(content), fieldnames=fieldnames)
+
+    @staticmethod
+    def _repair_cophieu68_content(content: str) -> str:
+        header = "<Ticker>,<DTYYYYMMDD>,<Open>,<High>,<Low>,<Close>,<Volume>"
+        if content.startswith(header) and not content.startswith(header + "\n"):
+            repaired = re.sub(
+                r"^(<Ticker>,<DTYYYYMMDD>,<Open>,<High>,<Low>,<Close>,<Volume>)([A-Za-z0-9._-]+,)",
+                r"\1\n\2",
+                content,
+                count=1,
+            )
+            return repaired
+        return content
+
+    @staticmethod
+    def _normalize_record(row: Dict[str, Any]) -> Dict[str, Any]:
+        normalized: Dict[str, Any] = {}
+        for key, value in row.items():
+            clean_key = (key or "").strip()
+            canonical_key = StockService.FIELD_ALIASES.get(clean_key.lower(), clean_key)
+            normalized[canonical_key] = value.strip() if isinstance(value, str) else value
+
+        if normalized.get("Date"):
+            parsed = StockService._parse_date(str(normalized["Date"]))
+            if parsed:
+                normalized["Date"] = parsed.strftime("%Y-%m-%d")
+
+        if normalized.get("Ticker"):
+            normalized["Ticker"] = StockService._normalize_symbol(str(normalized["Ticker"]))
+
+        return normalized
 
     @staticmethod
     def _download_eod_data_sync() -> Optional[bytes]:
@@ -144,7 +224,9 @@ class StockService:
     def _group_records_by_symbol(records: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
         grouped: Dict[str, List[Dict[str, Any]]] = {}
         for row in records:
-            symbol = StockService._normalize_symbol(row.get("Ticker", ""))
+            symbol = StockService._normalize_symbol(
+                row.get("Ticker") or row.get("Symbol") or row.get("<Ticker>") or ""
+            )
             if not symbol or symbol.startswith("^"):
                 continue
             grouped.setdefault(symbol, []).append(row)
@@ -227,7 +309,7 @@ class StockService:
         )
 
     @staticmethod
-    def _generate_watchlist_chart(snapshots: List[Dict[str, Any]]) -> Optional[str]:
+    def _generate_vn30_chart(snapshots: List[Dict[str, Any]]) -> Optional[str]:
         try:
             from matplotlib.figure import Figure
             from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -240,7 +322,7 @@ class StockService:
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
 
-            chart_path = os.path.join(output_dir, "stock_watchlist_chart.png")
+            chart_path = os.path.join(output_dir, "stock_vn30_chart.png")
             symbols = [item["symbol"] for item in chart_data]
             pct_changes = [item["pct_change"] for item in chart_data]
             colors = ["#16a34a" if value >= 0 else "#dc2626" for value in pct_changes]
@@ -249,7 +331,7 @@ class StockService:
             canvas = FigureCanvas(fig)
             ax = fig.add_subplot(111)
             bars = ax.bar(symbols, pct_changes, color=colors)
-            ax.set_title("Bien dong watchlist tu du lieu cophieu68")
+            ax.set_title("Bien dong VN30 tu du lieu cophieu68")
             ax.set_ylabel("% thay doi")
             ax.axhline(0, color="#111827", linewidth=0.8)
             ax.grid(True, axis="y", linestyle="--", alpha=0.4)
@@ -281,15 +363,17 @@ class StockService:
             }
 
         grouped_records = StockService._group_records_by_symbol(all_records)
-        watchlist = [
-            StockService._normalize_symbol(symbol)
-            for symbol in Config.STOCK_WATCHLIST
-            if StockService._normalize_symbol(symbol) and not StockService._normalize_symbol(symbol).startswith("^")
-        ]
+        target_symbols = [symbol for symbol in VN30_TICKERS if symbol]
+        logger.info(
+            "cophieu68 vn30 matching: records=%s symbols=%s vn30=%s",
+            len(all_records),
+            len(grouped_records),
+            ",".join(target_symbols),
+        )
 
         snapshots: List[Dict[str, Any]] = []
         missing_symbols: List[str] = []
-        for symbol in watchlist:
+        for symbol in target_symbols:
             symbol_records = grouped_records.get(symbol)
             if not symbol_records:
                 missing_symbols.append(symbol)
@@ -300,13 +384,17 @@ class StockService:
                 snapshots.append(snapshot)
 
         if not snapshots:
+            available_sample = ", ".join(sorted(list(grouped_records.keys()))[:20]) if grouped_records else "none"
             return {
-                "text": "Co du lieu cophieu68 nhung khong tim thay ma nao trong watchlist.",
+                "text": (
+                    "Co du lieu cophieu68 nhung khong tim thay ma nao trong VN30. "
+                    f"Mau ma tim thay: {available_sample}"
+                ),
                 "chart_path": None,
             }
 
         lines = [
-            "DU LIEU WATCHLIST TU COPHIEU68:",
+            "DU LIEU VN30 TU COPHIEU68:",
             f"Ngay giao dich gan nhat: {snapshots[0]['date']}",
         ]
         for item in snapshots:
@@ -323,9 +411,9 @@ class StockService:
             )
 
         if missing_symbols:
-            lines.append("Ma khong tim thay trong goi du lieu: " + ", ".join(sorted(set(missing_symbols))))
+            lines.append("Ma VN30 khong tim thay trong goi du lieu: " + ", ".join(sorted(set(missing_symbols))))
 
-        chart_path = StockService._generate_watchlist_chart(snapshots)
+        chart_path = StockService._generate_vn30_chart(snapshots)
         return {
             "text": "\n".join(lines),
             "chart_path": chart_path,
