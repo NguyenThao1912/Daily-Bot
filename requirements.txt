@@ -72,3 +72,4 @@ yfinance==1.1.0
 matplotlib==3.10.0
 weasyprint==63.1
 LunarCalendar==0.0.9
+aiohttp
