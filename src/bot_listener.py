@@ -1,7 +1,8 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 from src.config import Config
-from src.services.data_service import DataService
+from src.services.weather.weather_service import WeatherService
+from src.services.finance.crypto_service import CryptoService
 
 # --- Command Handlers ---
 
@@ -16,16 +17,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def weather_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Xử lý lệnh /weather -> Gọi DataService lấy thời tiết ngay lập tức"""
+    """Xử lý lệnh /weather -> Gọi WeatherService lấy thời tiết ngay lập tức"""
     msg = await update.message.reply_text("⏳ Đang check thời tiết...")
-    w_info = DataService.fetch_weather()
+    weather_data = WeatherService.fetch_weather()
+    w_info = weather_data.get("text", "Không lấy được dữ liệu thời tiết.") if isinstance(weather_data, dict) else str(weather_data)
     # Edit message để cập nhật kết quả
     await context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=w_info)
 
 async def crypto_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Xử lý lệnh /crypto"""
     msg = await update.message.reply_text("⏳ Đang check giá Coin...")
-    c_info = DataService.fetch_crypto()
+    c_info = CryptoService.fetch_crypto()
     await context.bot.edit_message_text(chat_id=update.effective_chat.id, message_id=msg.message_id, text=c_info)
 
 # --- Main Listener ---

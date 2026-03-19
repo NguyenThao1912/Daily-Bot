@@ -3,6 +3,15 @@ import base64
 from weasyprint import HTML, CSS
 
 class PDFService:
+    CATEGORY_LABELS = {
+        "weather": "Weather",
+        "calendar": "Calendar",
+        "finance": "Finance",
+        "news": "News",
+        "trends": "Trends",
+        "tech": "Technology",
+    }
+
     @staticmethod
     def _read_file_as_base64(path):
         """Helper to convert image to base64 for embedding in HTML"""
@@ -55,230 +64,443 @@ class PDFService:
             }}
             """
 
+        section_count = len(results)
+
         # 1. Premium CSS Template
         css_string = f"""
             {font_css}
-            
-            /* --- PAGE SETTINGS (Standard Margin) --- */
+
+            :root {{
+                --ink: #1f2937;
+                --muted: #6b7280;
+                --line: #dbe3ea;
+                --soft: #f4f7fb;
+                --panel: #ffffff;
+                --brand: #c96b2c;
+                --brand-deep: #8d4320;
+                --brand-soft: #fff2e8;
+                --accent: #0f766e;
+                --warn-bg: #fff4db;
+                --warn-line: #f2b94b;
+                --alert-bg: #edf9f6;
+                --alert-line: #57b39c;
+            }}
+
             @page {{
                 size: A4 portrait;
-                /* Standard Administrative Margins: Top 2cm, Bottom 2cm, Left 3cm, Right 2cm */
-                margin-top: 20mm;
-                margin-bottom: 20mm;
-                margin-left: 30mm;
-                margin-right: 20mm;
-                
+                margin: 16mm 16mm 18mm 18mm;
+
+                @top-right {{
+                    content: "Daily Briefing";
+                    font-size: 8.5pt;
+                    color: #94a3b8;
+                    font-family: 'Roboto';
+                    letter-spacing: 0.8px;
+                }}
+
                 @bottom-right {{
                     content: "Page " counter(page);
-                    font-size: 9pt;
-                    color: #7f8c8d;
+                    font-size: 8.5pt;
+                    color: #94a3b8;
                     font-family: 'Roboto';
                 }}
             }}
 
-            /* --- COVER PAGE (Full Bleed) --- */
             @page cover {{
                 margin: 0;
+                @top-right {{ content: none; }}
                 @bottom-right {{ content: none; }}
             }}
-            
-            /* --- RESET & GLOBAL --- */
-            * {{ box-sizing: border-box; }}
 
-            body {{ 
-                font-family: 'Roboto', sans-serif; 
-                font-size: 10pt; 
-                line-height: 1.5; 
-                color: #2c3e50;
-                background-color: #fff;
-                /* No fixed width here, let @page handle margins */
+            * {{
+                box-sizing: border-box;
             }}
-            
-            /* --- LAYOUT CONTAINERS --- */
+
+            html {{
+                color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }}
+
+            body {{
+                font-family: 'Roboto', sans-serif; 
+                font-size: 10pt;
+                line-height: 1.58;
+                color: var(--ink);
+                background: #fff;
+                margin: 0;
+            }}
+
+            p, ul, ol {{
+                margin-top: 0;
+            }}
+
+            ul, ol {{
+                padding-left: 18px;
+            }}
+
+            .report-shell {{
+                padding: 0;
+            }}
+
             .cover-page {{
-                page: cover; /* Use named page 'cover' */
+                page: cover;
                 width: 210mm;
-                height: calc(297mm - 1px); /* Slight reduction to avoid micro-overflow */
+                height: calc(297mm - 1px);
                 position: relative;
-                background-color: #2c3e50;
+                background:
+                    radial-gradient(circle at top right, rgba(255,255,255,0.09), transparent 28%),
+                    radial-gradient(circle at 15% 20%, rgba(255,214,179,0.18), transparent 22%),
+                    linear-gradient(145deg, #15202b 0%, #1f2937 48%, #3b2c25 100%);
                 color: white;
-                padding: 20mm; /* Symmetrical padding */
+                padding: 22mm 20mm 18mm 20mm;
                 overflow: hidden;
                 break-after: page;
-                display: flex; 
-                flex-direction: column; 
+                display: flex;
+                flex-direction: column;
                 justify-content: space-between;
             }}
 
-            .content-section {{
-               /* Content naturally flows */
-               margin-bottom: 20px;
-            }}
-            
-            /* --- HEADINGS --- */
-            h1.section-header {{ 
-                color: #2c3e50; 
-                font-size: 24pt; 
-                text-transform: uppercase; 
-                letter-spacing: 2px;
-                border-bottom: 4px solid #e67e22; /* Amber Accent */
-                padding-bottom: 10px; 
-                margin-top: 0;
-                margin-bottom: 30px;
-                text-align: right;
-                break-before: page; /* Always start new page */
+            .cover-page::before {{
+                content: "";
+                position: absolute;
+                inset: auto -28mm -28mm auto;
+                width: 120mm;
+                height: 120mm;
+                border-radius: 50%;
+                background: rgba(201, 107, 44, 0.18);
             }}
 
-            h2 {{ color: #e67e22; font-size: 14pt; margin-top: 20px; font-weight: 700; }}
-            h3 {{ color: #34495e; font-size: 12pt; margin-bottom: 5px; font-weight: 600; }}
-            
-            /* --- CARD COMPONENT --- */
-            .card {{ 
-                background-color: #fdfdfd; 
-                border: 1px solid #eee;
-                border-left: 6px solid #e67e22; /* Amber Accent */
-                border-radius: 6px;
-                padding: 15px 20px; 
-                margin-bottom: 25px; 
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            .cover-page::after {{
+                content: "";
+                position: absolute;
+                inset: 18mm auto auto -20mm;
+                width: 90mm;
+                height: 6mm;
+                background: linear-gradient(90deg, var(--brand), transparent);
+                transform: rotate(-12deg);
+                opacity: 0.8;
             }}
-            
-            .item-title {{ 
-                font-size: 13pt; 
-                font-weight: 800; 
-                color: #2c3e50; 
-                margin-bottom: 15px;
-                border-bottom: 1px solid #eee;
-                padding-bottom: 8px;
-                display: flex; align-items: center;
+
+            .cover-grid {{
+                position: relative;
+                z-index: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 18mm;
+                height: 100%;
             }}
-            
-            /* --- METADATA & LABELS --- */
-            .item-meta {{
-                background: #f4f6f7;
-                padding: 8px 12px;
-                border-radius: 4px;
-                border: 1px solid #ecf0f1;
-                color: #555;
+
+            .cover-kicker {{
+                display: inline-block;
+                padding: 5px 10px;
+                border: 1px solid rgba(255,255,255,0.18);
+                border-radius: 999px;
+                background: rgba(255,255,255,0.06);
+                color: #f6d3bc;
                 font-size: 9pt;
+                letter-spacing: 1.3px;
+                text-transform: uppercase;
+            }}
+
+            .cover-title {{
+                margin: 0;
+                max-width: 120mm;
+                font-size: 34pt;
+                line-height: 1.04;
+                font-weight: 800;
+                letter-spacing: -0.6px;
+            }}
+
+            .cover-title strong {{
+                color: #ffbe8f;
+            }}
+
+            .cover-subtitle {{
+                max-width: 118mm;
+                margin: 8mm 0 0;
+                color: #d6dee7;
+                font-size: 12pt;
+                line-height: 1.65;
+            }}
+
+            .cover-metrics {{
+                display: flex;
+                gap: 10mm;
+                margin-top: 10mm;
+            }}
+
+            .cover-metric {{
+                min-width: 36mm;
+                padding: 9px 10px;
+                border-radius: 12px;
+                background: rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.08);
+            }}
+
+            .cover-metric-label {{
+                display: block;
+                font-size: 8pt;
+                color: #d6dee7;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 4px;
+            }}
+
+            .cover-metric-value {{
+                font-size: 12.5pt;
+                font-weight: 700;
+                color: #fff;
+            }}
+
+            .cover-footer {{
+                position: relative;
+                z-index: 1;
+                display: flex;
+                justify-content: space-between;
+                align-items: end;
+                gap: 12mm;
+            }}
+
+            .cover-stamp {{
+                text-align: right;
+            }}
+
+            .cover-date {{
+                font-size: 27pt;
+                font-weight: 800;
+                line-height: 1;
+            }}
+
+            .cover-updated {{
+                margin-top: 4mm;
+                font-size: 10pt;
+                color: #d6dee7;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+            }}
+
+            .cover-credit {{
+                max-width: 70mm;
+                padding-top: 5mm;
+                border-top: 1px solid rgba(255,255,255,0.24);
+                color: #d6dee7;
+                font-size: 10pt;
+                line-height: 1.5;
+            }}
+
+            .content-section {{
+                margin: 0 0 11mm;
+                page-break-inside: avoid;
+            }}
+
+            .section-frame {{
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                background:
+                    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,251,253,0.98));
+                overflow: hidden;
+            }}
+
+            .section-topbar {{
+                padding: 12px 14px 10px;
+                border-bottom: 1px solid var(--line);
+                background: linear-gradient(90deg, #fff7f1 0%, #ffffff 68%);
+            }}
+
+            h1.section-header {{ 
+                color: var(--ink);
+                font-size: 18pt;
+                margin: 0;
+                letter-spacing: 0.3px;
+                font-weight: 800;
+                text-transform: none;
+            }}
+
+            .section-kicker {{
+                display: inline-block;
+                margin-bottom: 6px;
+                color: var(--brand);
+                font-size: 8.5pt;
+                text-transform: uppercase;
+                letter-spacing: 1.4px;
+                font-weight: 700;
+            }}
+
+            .section-content {{
+                padding: 14px;
+            }}
+
+            h2 {{
+                color: var(--brand-deep);
+                font-size: 14pt;
+                margin: 16px 0 8px;
+                font-weight: 700;
+            }}
+
+            h3 {{
+                color: var(--ink);
+                font-size: 11.5pt;
+                margin: 12px 0 6px;
+                font-weight: 700;
+            }}
+
+            .card {{ 
+                background: var(--panel);
+                border: 1px solid var(--line);
+                border-left: 5px solid var(--brand);
+                border-radius: 14px;
+                padding: 14px 16px;
+                margin-bottom: 14px;
+                box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+                page-break-inside: avoid;
+            }}
+
+            .item-title {{ 
+                font-size: 13pt;
+                font-weight: 800;
+                color: var(--ink);
+                margin-bottom: 12px;
+                border-bottom: 1px solid #edf2f7;
+                padding-bottom: 9px;
+                display: flex;
+                align-items: center;
+                gap: 7px;
+            }}
+
+            .item-meta {{
+                background: var(--soft);
+                padding: 8px 11px;
+                border-radius: 10px;
+                border: 1px solid #e9eef5;
+                color: #4b5563;
+                font-size: 8.7pt;
                 margin-bottom: 12px;
             }}
-            
+
+            .item-content {{
+                margin-bottom: 11px;
+            }}
+
             .sub-label {{
-                font-size: 8pt;
+                font-size: 7.9pt;
                 font-weight: 700;
-                color: #7f8c8d;
+                color: var(--muted);
                 text-transform: uppercase;
                 margin-bottom: 4px;
-                letter-spacing: 0.5px;
-                margin-top: 10px;
+                letter-spacing: 0.8px;
+                margin-top: 8px;
                 display: block;
             }}
 
-            /* --- TABLES --- */
             table {{ 
-                width: 100% !important; 
-                border-collapse: collapse; 
-                margin: 10px 0; 
+                width: 100% !important;
+                border-collapse: collapse;
+                margin: 10px 0 6px;
                 font-size: 9pt;
-                table-layout: auto; 
+                table-layout: auto;
+                border: 1px solid #e8edf3;
+                border-radius: 10px;
+                overflow: hidden;
             }}
             th {{ 
-                background-color: #34495e; 
-                color: #fff; 
-                padding: 10px; 
-                text-align: left; 
+                background-color: #253444;
+                color: #fff;
+                padding: 9px 10px;
+                text-align: left;
                 font-weight: 600;
             }}
             td {{ 
-                padding: 8px 10px; 
-                border-bottom: 1px solid #ecf0f1; 
+                padding: 8px 10px;
+                border-bottom: 1px solid #ecf0f1;
                 vertical-align: top;
             }}
-            tr:nth-child(even) {{ background-color: #f9f9f9; }}
-            
-            /* --- ALERTS --- */
+            tr:nth-child(even) {{ background-color: #fbfcfd; }}
+
             .alert {{ 
-                background-color: #e8f8f5; /* Mint Green */
-                color: #16a085; 
-                padding: 10px; 
-                border: 1px solid #d1f2eb; 
-                border-radius: 4px; 
-                margin-top: 15px; 
+                background-color: var(--alert-bg);
+                color: #0f6f61;
+                padding: 10px 12px;
+                border: 1px solid #d5efe8;
+                border-left: 4px solid var(--alert-line);
+                border-radius: 10px;
+                margin-top: 12px;
                 font-size: 9pt;
-                font-style: italic;
             }}
 
-            /* --- ACTION HIGHLIGHT --- */
             .action-highlight {{
-                background-color: #fff9c4; /* Light Yellow */
-                color: #d35400; /* Dark Orange */
-                border-left: 5px solid #f39c12;
+                background-color: var(--warn-bg);
+                color: #8a4a09;
+                border-left: 5px solid var(--warn-line);
                 padding: 12px;
-                margin-top: 15px;
-                font-size: 10pt;
-                font-weight: 500;
-                border-radius: 4px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                margin-top: 12px;
+                font-size: 9.5pt;
+                border-radius: 10px;
             }}
 
-            /* --- CHARTS GRID --- */
             .chart-grid {{
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 20px;
-                margin-top: 20px;
+                display: block;
+                margin-top: 8px;
                 break-inside: avoid;
             }}
+
             .chart-item {{
-                flex: 1 1 100%; /* 1 per row - full width */
+                width: 100%;
                 background: #fff;
-                border: 1px solid #e0e0e0;
+                border: 1px solid var(--line);
                 padding: 10px;
-                border-radius: 4px;
+                border-radius: 14px;
                 text-align: center;
                 max-width: 100%;
+                margin-bottom: 10px;
             }}
+
             .chart-img {{
-                max-width: 100%; height: auto; display: block;
-            }}
-            
-            /* --- EVENT SECTION --- */
-            .event-section {{
-                background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
-                border: 2px solid #f39c12;
+                max-width: 100%;
+                height: auto;
+                display: block;
                 border-radius: 8px;
-                padding: 20px;
-                margin: 20px 0;
-                box-shadow: 0 3px 8px rgba(243, 156, 18, 0.2);
             }}
-            .event-section h3 {{
-                color: #d35400;
-                font-size: 16pt;
-                margin-bottom: 15px;
+
+            .chart-title {{
+                margin: 0 0 8px;
+                font-size: 9pt;
                 font-weight: 700;
-                border-bottom: 2px solid #f39c12;
-                padding-bottom: 8px;
+                color: var(--muted);
+                text-transform: uppercase;
+                letter-spacing: 0.8px;
+                text-align: left;
             }}
-            .event-item {{
-                background: white;
-                padding: 12px 15px;
-                margin: 10px 0;
-                border-left: 4px solid #e67e22;
-                border-radius: 4px;
-                font-size: 12pt;
+
+            .motto {{
+                margin-top: 18px;
+                padding: 10px 12px;
+                border-radius: 10px;
+                background: linear-gradient(90deg, #f8fafc, #fff7f1);
+                border: 1px solid var(--line);
+                color: #435266;
+                font-size: 9pt;
+            }}
+
+            a {{
+                color: #1769aa;
+                text-decoration: none;
                 font-weight: 500;
             }}
-            .event-time {{
-                color: #e67e22;
-                font-weight: 700;
-                font-size: 13pt;
-                margin-right: 10px;
+
+            hr {{
+                border: none;
+                border-top: 1px solid #e8edf3;
+                margin: 10px 0;
             }}
-            
-            /* --- LINKS --- */
-            a {{ color: #2980b9; text-decoration: none; font-weight: 500; }}
+
+            code {{
+                font-size: 8.7pt;
+                background: #f8fafc;
+                padding: 1px 5px;
+                border-radius: 5px;
+                border: 1px solid #edf2f7;
+            }}
         """
 
         # 2. Build HTML Content
@@ -297,37 +519,59 @@ class PDFService:
             <title>Daily Report</title>
         </head>
         <body>
-            <!-- COVER PAGE -->
             <div class="cover-page">
-                <div style="flex: 1; display: flex; align-items: center;">
-                     <!-- Decorative Background Elements -->
-                     <div style="position: relative; z-index: 1; border-left: 8px solid #e67e22; padding-left: 25px;">
-                        <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: white; border: none;">DAILY</h1>
-                        <h1 style="font-size: 42pt; margin: 0; line-height: 1.1; color: #e67e22; border: none;">BRIEFING</h1>
-                        <p style="font-size: 14pt; margin-top: 15px; color: #bdc3c7; letter-spacing: 2px; text-transform: uppercase;">Intelligence Report</p>
-                     </div>
-                </div>
+                <div class="cover-grid">
+                    <div>
+                        <span class="cover-kicker">Morning intelligence</span>
+                        <h1 class="cover-title">Daily <strong>Briefing</strong></h1>
+                        <p class="cover-subtitle">
+                            Ban tin tong hop cho ngay moi, gom cac tin hieu ve tai chinh, thoi tiet,
+                            xu huong, tin tuc va cong nghe duoc trinh bay theo huong de doc, de quyet dinh.
+                        </p>
 
-                <div style="text-align: right; z-index: 1; flex-shrink: 0;">
-                    <div style="font-size: 32pt; font-weight: bold; margin-bottom: 10px;">{date_str}</div>
-                    <div style="font-size: 14pt; color: #bdc3c7; margin-bottom: 20px;">UPDATED: {time_str}</div>
-                    <div style="border-top: 1px solid #7f8c8d; padding-top: 15px; font-size: 11pt;">
-                        PREPARED BY <b>DAILY-BOT AI</b>
+                        <div class="cover-metrics">
+                            <div class="cover-metric">
+                                <span class="cover-metric-label">Sections</span>
+                                <span class="cover-metric-value">{section_count}</span>
+                            </div>
+                            <div class="cover-metric">
+                                <span class="cover-metric-label">Timezone</span>
+                                <span class="cover-metric-value">Asia/Ho_Chi_Minh</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cover-footer">
+                        <div class="cover-credit">
+                            Prepared by <b>Daily-Bot AI</b><br/>
+                            Structured report for Telegram and PDF delivery.
+                        </div>
+                        <div class="cover-stamp">
+                            <div class="cover-date">{date_str}</div>
+                            <div class="cover-updated">Updated {time_str}</div>
+                        </div>
                     </div>
                 </div>
             </div>
+            <div class="report-shell">
         """
 
         # Category Pages
         for res in results:
-            cat = res.get("category", "unknown").upper()
+            raw_cat = res.get("category", "unknown")
+            cat = raw_cat.upper()
             content = res.get("content", "")
+            pretty_label = PDFService.CATEGORY_LABELS.get(raw_cat, raw_cat.title())
             
-            # Start New Section
             html_body += f"""
             <div class="content-section">
-                <h1 class="section-header">{cat}</h1>
-                {content}
+                <div class="section-frame">
+                    <div class="section-topbar">
+                        <div class="section-kicker">Section</div>
+                        <h1 class="section-header">{cat}</h1>
+                    </div>
+                    <div class="section-content">
+                        {content}
             """
             
             # Embed Chart(s)
@@ -348,14 +592,20 @@ class PDFService:
                         if b64_img:
                              html_body += f"""
                                 <div class="chart-item">
+                                    <div class="chart-title">{pretty_label} chart</div>
                                     <img class="chart-img" src="data:image/png;base64,{b64_img}" />
                                 </div>
                             """
                 html_body += '</div>'
             
-            html_body += "</div>" # Close content-section
+            html_body += """
+                    </div>
+                </div>
+            </div>
+            """
 
         html_body += """
+            </div>
         </body>
         </html>
         """

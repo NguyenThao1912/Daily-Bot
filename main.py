@@ -4,9 +4,8 @@ matplotlib.use('Agg') # Force non-interactive backend to prevent recursion/threa
 import asyncio
 import shutil
 import pytz
-from datetime import datetime, timedelta
+from datetime import datetime
 from telegram import Bot
-from supabase import create_client
 
 # --- PROJECT IMPORTS ---
 from src.config import Config
@@ -17,7 +16,6 @@ from src.services.finance.banking_service import BankingService
 from src.services.stock.stock_service import StockService
 from src.services.social.news_service import NewsService
 from src.services.weather.weather_service import WeatherService
-from src.services.subscription_service import SubscriptionService
 from src.services.calendar.lunar_service import LunarService
 
 # --- HELPER FUNCTIONS ---
@@ -77,49 +75,6 @@ async def send_event_notifications(bot, chat_id, upcoming_holidays):
         print("✅ Lunar holiday notifications sent!")
     except Exception as e:
         print(f"⚠️ Failed to send holiday notifications: {e}")
-
-async def save_reminders(alerts):
-    """Saves alerts to Supabase, correcting for Timezone and Reminder Logic."""
-    if not Config.SUPABASE_URL or not Config.SUPABASE_KEY:
-        print("⚠️ Supabase config missing. Skipping reminders.")
-        return
-
-    supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
-    
-    # DEFINING TIMEZONE (Vietnam)
-    vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
-    now = datetime.now(vn_tz)
-    
-    for alert in alerts:
-        try:
-            # Parse time HH:MM (naive)
-            deal_time = datetime.strptime(alert['time'], "%H:%M")
-            
-            # Create timezone-aware datetime for TODAY
-            event_dt = now.replace(
-                hour=deal_time.hour, 
-                minute=deal_time.minute, 
-                second=0, 
-                microsecond=0
-            )
-            
-            # Logic: Remind 1 hour before the event
-            remind_dt = event_dt - timedelta(hours=1)
-            
-            # If the calculated reminder time has already passed today
-            if remind_dt < now: 
-                 print(f"⚠️ Reminder for {alert['title']} at {remind_dt.strftime('%H:%M')} has passed. Skipping.")
-                 continue
-
-            supabase.table("reminders").insert({
-                "title": alert["title"],
-                "remind_at": remind_dt.isoformat(), # ISO format with TZ info
-                "status": "pending"
-            }).execute()
-            print(f"✅ Saved reminder: {alert['title']} for {remind_dt.strftime('%H:%M')}")
-
-        except Exception as e:
-            print(f"❌ Failed to save reminder '{alert.get('title', 'Unknown')}': {e}")
 
 # --- MAIN FLOW ---
 
@@ -236,18 +191,6 @@ async def main():
              print(f"✅ Loaded [{k}]: {len(v)} items")
     print("----------------------------------\n")
 
-    # Fetch Supabase CRM Data
-    if Config.SUPABASE_URL and Config.SUPABASE_KEY and Config.TELEGRAM_CHAT_ID:
-        try:
-             supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
-             sub_service = SubscriptionService(supabase)
-             bills_data = sub_service.get_upcoming_bills(Config.TELEGRAM_CHAT_ID)
-             
-             # Append bills to finance section
-             data_map["finance"] += f"\n\n--- [PERSONAL FINANCE] ---\n{bills_data}"
-        except Exception as e:
-             print(f"⚠️ CRM Data fetch failed: {e}")
-
     # 4. AI Analysis
     vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
     now_str_short = datetime.now(vn_tz).strftime('%d/%m/%Y')
@@ -320,11 +263,6 @@ async def main():
 
     else:
         print("⚠️ No TELEGRAM_CHAT_ID found. Report generated but not sent.")
-
-    # 6. Save Reminders (Alerts found by AI)
-    if orchestrator.alerts:
-        print(f"🔔 Found {len(orchestrator.alerts)} alerts. Saving...")
-        await save_reminders(orchestrator.alerts)
 
     print("✅ Process Completed!")
 

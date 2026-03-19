@@ -20,25 +20,18 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+
     - name: Install System Dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y libcairo2-dev pkg-config python3-dev libpango-1.0-0 libpangoft2-1.0-0
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
-      id: venv-cache
-      with:
-        path: venv
-        key: venv-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
-
-    - name: Install dependencies
-      if: steps.venv-cache.outputs.cache-hit != 'true'
-      run: |
-        python -m venv venv
-        source venv/bin/activate
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+    - name: Sync dependencies
+      run: uv sync
 
     - name: Run Agent
       env:
@@ -58,5 +51,4 @@ jobs:
         WEATHER_LOCATION: ${{ secrets.WEATHER_LOCATION }}
         WORKER_HOST: ${{ secrets.WORKER_HOST }}
       run: |
-        source venv/bin/activate
-        python main.py
+        uv run python main.py

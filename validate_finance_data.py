@@ -54,29 +54,27 @@ print("\n--- 🔍 VALIDATING FINANCE DATA APIs ---\n")
 
 # 1. STOCK SERVICE
 print("--- STOCK SERVICE ---")
-# Pick a reliable stock
-symbol = "HPG"
-hist = StockService._fetch_stock_history(symbol)
-if hist:
-    print(f"✅ _fetch_stock_history({symbol}): OK (300 items requested, got {len(hist)})")
-    
-    # Validation Tech Indicators
-    try:
-        rsi, ma20, ma50, ma200, vol_avg = StockService.calculate_technical_indicators(hist)
-        print(f"   👉 RSI: {rsi}")
-        print(f"   👉 MA20: {ma20}")
-        print(f"   👉 MA50: {ma50}")
-        print(f"   👉 MA200: {ma200}")
-        print(f"   👉 Vol20: {vol_avg}")
-        
-        if all(x is not None for x in [rsi, ma20, ma50, ma200, vol_avg]):
-            print("✅ calculate_technical_indicators: OK")
-        else:
-            print("⚠️ calculate_technical_indicators: Partial Data (Only RSI/MA20 might be available if history is short)")
-    except Exception as e:
-        print(f"❌ calculate_technical_indicators: FAILED ({e})")
+all_records = StockService._fetch_all_records_sync()
+if all_records:
+    print(f"✅ cophieu68 download/process: OK ({len(all_records)} rows)")
+    grouped = StockService._group_records_by_symbol(all_records)
+    symbol = "HPG"
+    hist = grouped.get(symbol, [])
+    if hist:
+        print(f"✅ grouped history ({symbol}): OK ({len(hist)} rows)")
+        try:
+            rsi, ma20, ma50, ma200, vol_avg = StockService.calculate_technical_indicators(hist)
+            print(f"   👉 RSI: {rsi}")
+            print(f"   👉 MA20: {ma20}")
+            print(f"   👉 MA50: {ma50}")
+            print(f"   👉 MA200: {ma200}")
+            print(f"   👉 Vol20: {vol_avg}")
+        except Exception as e:
+            print(f"❌ calculate_technical_indicators: FAILED ({e})")
+    else:
+        print(f"❌ grouped history ({symbol}): FAILED/EMPTY")
 else:
-    print(f"❌ _fetch_stock_history({symbol}): FAILED/EMPTY")
+    print("❌ cophieu68 download/process: FAILED/EMPTY")
 
 # Test main fetch string
 print(" Testing Stock Output String:")
@@ -87,8 +85,8 @@ try:
     if not hasattr(Config, 'STOCK_WATCHLIST') or not Config.STOCK_WATCHLIST:
         Config.STOCK_WATCHLIST = ["HPG", "VCB", "FPT"]
         
-    s_text = StockService.fetch_stock_analysis()
-    print(f"✅ fetch_stock_analysis output length: {len(s_text)}")
+    stock_payload = StockService.fetch_stock_analysis()
+    print(f"✅ fetch_stock_analysis output length: {len(stock_payload.get('text', ''))}")
 except Exception as e:
     print(f"❌ fetch_stock_analysis FAILED: {e}")
 

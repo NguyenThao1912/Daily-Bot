@@ -1,8 +1,21 @@
-import requests
 import os
+import urllib.parse
+import xml.etree.ElementTree as ET
+
+import requests
+
 from src.config import Config
 
 class NewsService:
+    GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
+    GOOGLE_NEWS_TOP_URL = "https://news.google.com/rss"
+    NEWS_QUERIES = {
+        "general": "Vietnam OR world news when:1d",
+        "featured": "Vietnam headlines OR breaking news when:1d",
+        "business": "Vietnam business OR economy OR market when:1d",
+        "tech": "AI OR technology OR startup OR software when:1d",
+    }
+
     @staticmethod
     def _fetch_from_worker(path, params=None):
         try:
@@ -16,12 +29,85 @@ class NewsService:
 
     @staticmethod
     def fetch_news(news_type="general", limit=20):
-        data = NewsService._fetch_from_worker("/news", params={"type": news_type, "limit": limit})
-        if not data or 'data' not in data:
+        entries = NewsService._fetch_google_news(news_type, limit)
+        if not entries:
             return "Không lấy được tin tức."
-        
-        top_news = [f"- [{entry['title']}]({entry['link']})" for entry in data['data']]
+
+        top_news = [f"- [{entry['title']}]({entry['link']})" for entry in entries]
         return "\n".join(top_news)
+
+    @staticmethod
+    def _build_google_news_url(news_type: str, limit: int) -> str:
+        query = NewsService.NEWS_QUERIES.get(news_type, NewsService.NEWS_QUERIES["general"])
+        params = {
+            "q": query,
+            "hl": "vi",
+            "gl": "VN",
+            "ceid": "VN:vi",
+        }
+        base_url = f"{NewsService.GOOGLE_NEWS_RSS_URL}?{urllib.parse.urlencode(params)}"
+        return f"{base_url}&num={limit}"
+
+    @staticmethod
+    def _fetch_google_news(news_type="general", limit=20):
+        try:
+            url = NewsService._build_google_news_url(news_type, limit)
+            response = requests.get(url, timeout=20)
+            response.raise_for_status()
+
+            root = ET.fromstring(response.content)
+            items = root.findall(".//item")
+            entries = []
+            seen_links = set()
+
+            for item in items:
+                title = (item.findtext("title") or "").strip()
+                link = (item.findtext("link") or "").strip()
+                if not title or not link or link in seen_links:
+                    continue
+
+                seen_links.add(link)
+                entries.append({
+                    "title": title,
+                    "link": link,
+                    "pub_date": (item.findtext("pubDate") or "").strip(),
+                    "source": (item.findtext("source") or "").strip(),
+                })
+                if len(entries) >= limit:
+                    break
+
+            if entries:
+                return entries
+
+            if news_type in {"general", "featured"}:
+                return NewsService._fetch_google_top_news(limit)
+            return []
+        except Exception as e:
+            print(f"⚠️ Google News Error ({news_type}): {e}")
+            if news_type in {"general", "featured"}:
+                return NewsService._fetch_google_top_news(limit)
+            return []
+
+    @staticmethod
+    def _fetch_google_top_news(limit=20):
+        try:
+            params = {"hl": "vi", "gl": "VN", "ceid": "VN:vi"}
+            url = f"{NewsService.GOOGLE_NEWS_TOP_URL}?{urllib.parse.urlencode(params)}"
+            response = requests.get(url, timeout=20)
+            response.raise_for_status()
+
+            root = ET.fromstring(response.content)
+            entries = []
+            for item in root.findall(".//item")[:limit]:
+                title = (item.findtext("title") or "").strip()
+                link = (item.findtext("link") or "").strip()
+                if not title or not link:
+                    continue
+                entries.append({"title": title, "link": link})
+            return entries
+        except Exception as e:
+            print(f"⚠️ Google Top News Error: {e}")
+            return []
 
     @staticmethod
     def _generate_trend_chart(trends_data):

@@ -4,20 +4,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Core
-    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    WORKER_HOST = os.getenv("WORKER_HOST", "http://localhost:8787")
+    @staticmethod
+    def _get_env(key, default=None):
+        val = os.getenv(key)
+        if val and val.strip():
+            return val.strip()
+        return default
 
-    # Supabase
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    # Core
+    TELEGRAM_BOT_TOKEN = _get_env.__func__("TELEGRAM_BOT_TOKEN")
+    TELEGRAM_CHAT_ID = _get_env.__func__("TELEGRAM_CHAT_ID")
+    GEMINI_API_KEY = _get_env.__func__("GEMINI_API_KEY")
+    WORKER_HOST = _get_env.__func__("WORKER_HOST", "http://localhost:8787")
 
     # External APIs
-    WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
-    WEATHER_LOCATION = os.getenv("WEATHER_LOCATION", "Hanoi")
-    STOCK_WATCHLIST = os.getenv("STOCK_WATCHLIST", "FPT.VN,HPG.VN,VHM.VN,VCB.VN,MBB.VN,ACB.VN,TCB.VN,VIC.VN,^VNINDEX").split(",")
+    WEATHER_API_KEY = _get_env.__func__("WEATHER_API_KEY")
+    WEATHER_LOCATION = _get_env.__func__("WEATHER_LOCATION", "Hanoi")
+    STOCK_WATCHLIST = _get_env.__func__(
+        "STOCK_WATCHLIST",
+        "FPT.VN,HPG.VN,VHM.VN,VCB.VN,MBB.VN,ACB.VN,TCB.VN,VIC.VN,^VNINDEX",
+    ).split(",")
 
     # Default Portfolio (Hardcoded for now as requested)
     # Format: {"Symbol": {"vol": float, "cost": float}}
@@ -28,7 +34,8 @@ class Config:
     @staticmethod
     def _get_key(key, default):
         val = os.getenv(key)
-        if val and val.strip(): return val
+        if val and val.strip():
+            return val.strip()
         return default
 
     # Agents Specific Keys (Defaults to Main Key)
