@@ -1,6 +1,7 @@
 import os
 import urllib.parse
 import xml.etree.ElementTree as ET
+from typing import List
 
 import requests
 
