@@ -291,7 +291,8 @@ class PDFService:
 
             .content-section {{
                 margin: 0 0 11mm;
-                page-break-inside: avoid;
+                break-inside: auto;
+                page-break-inside: auto;
             }}
 
             .section-frame {{
@@ -299,13 +300,17 @@ class PDFService:
                 border-radius: 18px;
                 background:
                     linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,251,253,0.98));
-                overflow: hidden;
+                overflow: visible;
+                break-inside: auto;
+                page-break-inside: auto;
             }}
 
             .section-topbar {{
                 padding: 12px 14px 10px;
                 border-bottom: 1px solid var(--line);
                 background: linear-gradient(90deg, #fff7f1 0%, #ffffff 68%);
+                break-after: avoid;
+                page-break-after: avoid;
             }}
 
             h1.section-header {{ 
@@ -353,7 +358,8 @@ class PDFService:
                 padding: 14px 16px;
                 margin-bottom: 14px;
                 box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
-                page-break-inside: avoid;
+                break-inside: auto;
+                page-break-inside: auto;
             }}
 
             .item-title {{ 
@@ -401,7 +407,7 @@ class PDFService:
                 table-layout: auto;
                 border: 1px solid #e8edf3;
                 border-radius: 10px;
-                overflow: hidden;
+                overflow: visible;
             }}
             th {{ 
                 background-color: #253444;
@@ -441,7 +447,8 @@ class PDFService:
             .chart-grid {{
                 display: block;
                 margin-top: 8px;
-                break-inside: avoid;
+                break-inside: auto;
+                page-break-inside: auto;
             }}
 
             .chart-item {{
@@ -453,6 +460,8 @@ class PDFService:
                 text-align: center;
                 max-width: 100%;
                 margin-bottom: 10px;
+                break-inside: avoid;
+                page-break-inside: avoid;
             }}
 
             .chart-img {{
