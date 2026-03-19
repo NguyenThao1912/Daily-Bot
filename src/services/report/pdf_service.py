@@ -55,6 +55,60 @@ class PDFService:
         return plain
 
     @staticmethod
+    def _extract_summary_text(content: str) -> str:
+        if not content:
+            return ""
+
+        # Remove noisy blocks that pollute the summary.
+        cleaned = re.sub(r"<table.*?</table>", " ", content, flags=re.IGNORECASE | re.DOTALL)
+        cleaned = re.sub(r"<div class=\"item-title\".*?</div>", " ", cleaned, flags=re.IGNORECASE | re.DOTALL)
+        cleaned = re.sub(r"<div class=\"item-meta\".*?</div>", " ", cleaned, flags=re.IGNORECASE | re.DOTALL)
+        cleaned = re.sub(r"<div class=\"sub-label\".*?</div>", " ", cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+        # Prefer action / alert / item-content blocks over raw full-card text.
+        block_patterns = [
+            r"<div class=\"action-highlight\".*?>(.*?)</div>",
+            r"<div class=\"alert\".*?>(.*?)</div>",
+            r"<div class=\"item-content\".*?>(.*?)</div>",
+            r"<p.*?>(.*?)</p>",
+            r"<li.*?>(.*?)</li>",
+        ]
+
+        candidates = []
+        for pattern in block_patterns:
+            for match in re.findall(pattern, cleaned, flags=re.IGNORECASE | re.DOTALL):
+                plain = PDFService._strip_html_tags(match)
+                plain = re.sub(r"^(Tong quan|Ma manh|Ma yeu|Rui ro|Hanh dong|Noi dung)\s*:?\s*", "", plain, flags=re.IGNORECASE)
+                plain = re.sub(r"\s+", " ", plain).strip(" -:|")
+                if len(plain) >= 35:
+                    candidates.append(plain)
+
+        if candidates:
+            return candidates[0]
+
+        return PDFService._strip_html_tags(cleaned)
+
+    @staticmethod
+    def _compress_summary_sentence(text: str, max_chars: int = 160) -> str:
+        plain = re.sub(r"\s+", " ", text or "").strip()
+        if not plain:
+            return ""
+
+        parts = re.split(r"(?<=[.!?])\s+", plain)
+        sentence = ""
+        for part in parts:
+            if len(part) >= 30:
+                sentence = part.strip()
+                break
+        if not sentence:
+            sentence = plain
+
+        if len(sentence) > max_chars:
+            sentence = sentence[:max_chars].rsplit(" ", 1)[0].rstrip(",;:")
+            sentence += "..."
+        return sentence
+
+    @staticmethod
     def _build_executive_summary(results):
         priority = ["finance", "news", "weather", "trends", "tech", "calendar"]
         labels = {
@@ -68,11 +122,10 @@ class PDFService:
         ordered = sorted(results, key=lambda r: priority.index(r.get("category")) if r.get("category") in priority else 99)
         summary_items = []
         for res in ordered:
-            plain = PDFService._strip_html_tags(res.get("content", ""))
-            if not plain:
+            summary_source = PDFService._extract_summary_text(res.get("content", ""))
+            if not summary_source:
                 continue
-            sentence = re.split(r"(?<=[.!?])\s+", plain)[0].strip()
-            sentence = sentence[:220].rstrip()
+            sentence = PDFService._compress_summary_sentence(summary_source)
             if sentence:
                 summary_items.append((labels.get(res.get("category", ""), res.get("category", "").title()), sentence))
             if len(summary_items) >= 5:
@@ -248,11 +301,17 @@ class PDFService:
 
             .executive-summary-list {{
                 margin: 0;
-                padding-left: 18px;
+                padding: 0;
+                list-style: none;
             }}
 
             .executive-summary-list li {{
-                margin-bottom: 6px;
+                margin-bottom: 8px;
+                padding: 8px 10px;
+                border-radius: 10px;
+                background: #fff;
+                border: 1px solid #eee5dc;
+                line-height: 1.45;
             }}
 
             .cover-page {{

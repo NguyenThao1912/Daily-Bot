@@ -1,6 +1,7 @@
 Dữ liệu đầu vào thực tế của mục finance có thể gồm:
 - `MARKET OVERVIEW`: dữ liệu thị trường tổng quan.
 - `VN30 STOCKS`: dữ liệu VN30 lấy từ cophieu68, gồm close, change, % change, RSI, MA, volume.
+- `VN30 IMPACT NEWS`: các tin có thể ảnh hưởng dài hạn đến nhóm VN30 hoặc các mã lớn trong VN30.
 - `BANKING`: lãi suất và tỷ giá nếu có.
 - `CRYPTO`: tóm tắt giá crypto.
 - `MACRO & POLITICS`: danh sách tin tổng hợp.
@@ -15,6 +16,7 @@ Nguyên tắc:
 3. Với tin vĩ mô/chính trị, chỉ suy luận ở mức ảnh hưởng tiềm năng từ tiêu đề.
 4. Tránh đưa khuyến nghị đầu tư chắc chắn.
 5. Phần phân tích VN30 không được quá ngắn; cần đủ chi tiết để người đọc hiểu nhóm mạnh, nhóm yếu và tín hiệu đáng chú ý.
+6. Nếu `VN30 IMPACT NEWS` có dữ liệu, bắt buộc phải lồng các tin đó vào nhận định finance, nhất là khi chúng có thể ảnh hưởng dài hạn đến ngân hàng, bất động sản, tiêu dùng, năng lượng, công nghệ, logistics hoặc các mã lớn trong VN30.
 
 Yêu cầu:
 1. Tóm tắt trạng thái chung của thị trường trong ngày.
@@ -22,7 +24,7 @@ Yêu cầu:
    - mã nào biến động mạnh,
    - mã nào có RSI đáng chú ý,
    - mã nào đáng theo dõi vì chênh lệch giá/khối lượng.
-3. Nêu ngắn gọn tác động của banking, crypto và tin kinh doanh nếu dữ liệu có.
+3. Nêu ngắn gọn tác động của `VN30 IMPACT NEWS`, banking, crypto và tin kinh doanh nếu dữ liệu có.
 4. Kết thúc bằng hành động phòng thủ/thận trọng hoặc ưu tiên theo dõi.
 5. Không chỉ liệt kê; phải có nhận định tổng hợp về cấu trúc của nhóm VN30.
 6. Phần VN30 phải đi theo cấu trúc cố định để output đều qua từng ngày.
@@ -37,14 +39,16 @@ Một HTML card gồm:
 - Một phần `Tổng quan`.
 - Một phần `Mã mạnh`.
 - Một phần `Mã yếu`.
+- Một phần `Tin ảnh hưởng dài hạn tới VN30`.
 - Một phần `Rủi ro`.
 - Một phần `Hành động hôm nay`.
 
 Ràng buộc trình bày:
-- Bảng `Toàn cảnh VN30` phải đứng trước 5 mục phân tích.
+- Bảng `Toàn cảnh VN30` phải đứng trước 6 mục phân tích.
 - Nếu dữ liệu đủ, ưu tiên hiển thị toàn bộ các mã VN30 có trong input.
-- Giữ đúng 5 mục trên theo đúng thứ tự.
+- Giữ đúng 6 mục trên theo đúng thứ tự.
 - Trong `Mã mạnh` và `Mã yếu`, mỗi mã phải có 1 câu giải thích ngắn.
+- Trong `Tin ảnh hưởng dài hạn tới VN30`, chỉ lấy những tin thật sự có khả năng ảnh hưởng đến xu hướng ngành hoặc các mã lớn.
 - Nếu thiếu dữ liệu banking/crypto/news thì chỉ ghi ngắn gọn, không làm loãng phần VN30.
 
 Nếu dữ liệu stock từ cophieu68 không có:

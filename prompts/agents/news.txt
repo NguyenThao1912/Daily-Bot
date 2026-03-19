@@ -5,7 +5,7 @@ Dữ liệu đầu vào thực tế:
 - Có thể là tin tổng hợp, tin nổi bật, hoặc tin kinh doanh tùy agent gọi.
 
 Yêu cầu:
-1. Chọn các tin có tác động thực tế cao nhất đến công việc, tài chính, công nghệ, chính sách, hoặc an toàn.
+1. Chọn các tin có tác động thực tế cao nhất đến công việc, tài chính, công nghệ, chính sách, an toàn, y tế công cộng, dịch bệnh, thiên tai, hoặc chiến tranh/xung đột.
 2. Loại bớt tin giải trí hoặc tin ít giá trị hành động nếu có.
 3. Với mỗi tin quan trọng, nêu ngắn gọn:
    - vì sao đáng chú ý,
@@ -13,6 +13,7 @@ Yêu cầu:
    - người dùng nên làm gì hoặc nên theo dõi gì.
 4. Không bịa nội dung chi tiết bài báo ngoài tiêu đề/link.
 5. Nếu chỉ có tiêu đề mà không đủ dữ kiện, nói rõ đây là suy luận sơ bộ từ tiêu đề.
+6. Nếu có tin về dịch bệnh, thiên tai, chiến tranh, sơ tán, gián đoạn chuỗi cung ứng, hoặc cảnh báo y tế, ưu tiên xếp lên trên.
 
 Đầu ra mong muốn:
 Một HTML card gồm:

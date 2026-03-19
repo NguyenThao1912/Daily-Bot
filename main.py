@@ -62,6 +62,16 @@ def build_agent_prompt(base_prompt: str, agent_name: str) -> str:
     return f"{base_prompt}\n\n{specific_prompt}"
 
 
+def format_news_entries(entries: list[dict[str, str]], empty_message: str) -> str:
+    if not entries:
+        return empty_message
+    return "\n".join(
+        f"- [{entry.get('title', 'Untitled')}]({entry.get('link', '')})"
+        for entry in entries
+        if entry.get("title") and entry.get("link")
+    ) or empty_message
+
+
 def register_agents(orchestrator: Orchestrator, base_prompt: str) -> None:
     for name in AGENT_LABELS.keys():
         api_key = Config.GEMINI_KEYS.get(name)
@@ -81,10 +91,20 @@ def fetch_report_context() -> ReportContext:
     stock_text, stock_charts = get_safe_data(StockService.fetch_stock_analysis())
     crypto_text = str(CryptoService.fetch_crypto())
 
-    news_text = NewsService.fetch_news("general")
-    featured_news = NewsService.fetch_news("featured")
-    business_news = NewsService.fetch_news("business")
-    tech_news = NewsService.fetch_news("tech")
+    general_news_entries = NewsService.fetch_news_entries("general")
+    featured_news_entries = NewsService.fetch_news_entries("featured")
+    business_news_entries = NewsService.fetch_news_entries("business")
+    tech_news_entries = NewsService.fetch_news_entries("tech")
+    vn30_impact_entries = NewsService.fetch_vn30_impact_news()
+
+    news_text = format_news_entries(general_news_entries, "Không lấy được tin tức.")
+    featured_news = format_news_entries(featured_news_entries, "Không lấy được tin nổi bật.")
+    business_news = format_news_entries(business_news_entries, "Không lấy được tin kinh doanh.")
+    tech_news = format_news_entries(tech_news_entries, "Không lấy được tin công nghệ.")
+    vn30_impact_news = format_news_entries(
+        vn30_impact_entries,
+        "Chưa ghi nhận tin rõ ràng có thể ảnh hưởng dài hạn đến VN30 từ feed hiện tại.",
+    )
     trends_text, trends_chart = get_safe_data(NewsService.fetch_trends())
 
     calendar_text = str(LunarService.get_date_info())
@@ -94,6 +114,7 @@ def fetch_report_context() -> ReportContext:
         "finance": (
             f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
             f"--- [VN30 STOCKS] ---\n{stock_text}\n"
+            f"--- [VN30 IMPACT NEWS] ---\n{vn30_impact_news}\n"
             f"--- [BANKING] ---\n{banking_text}\n"
             f"--- [CRYPTO] ---\n{crypto_text}\n"
             f"--- [MACRO & POLITICS] ---\n{news_text}\n"
