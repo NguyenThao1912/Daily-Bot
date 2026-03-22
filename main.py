@@ -4,6 +4,7 @@ matplotlib.use('Agg') # Force non-interactive backend to prevent recursion/threa
 import asyncio
 import shutil
 import pytz
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Dict, Tuple
 from telegram import Bot
@@ -161,17 +162,31 @@ def register_agents(orchestrator: Orchestrator, base_prompt: str) -> None:
 
 def fetch_report_context() -> ReportContext:
     print("⏳ Fetching real-time data...")
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {
+            "weather": executor.submit(WeatherService.fetch_weather),
+            "market": executor.submit(MarketService.fetch_market),
+            "banking": executor.submit(BankingService.fetch_banking_rates),
+            "stock": executor.submit(StockService.fetch_stock_analysis),
+            "general_news": executor.submit(NewsService.fetch_news_entries, "general"),
+            "featured_news": executor.submit(NewsService.fetch_news_entries, "featured"),
+            "business_news": executor.submit(NewsService.fetch_news_entries, "business"),
+            "tech_news": executor.submit(NewsService.fetch_news_entries, "tech"),
+            "vn30_impact": executor.submit(NewsService.fetch_vn30_impact_news),
+            "trends": executor.submit(NewsService.fetch_trends),
+        }
 
-    weather_text, weather_chart, _, _ = get_safe_data(WeatherService.fetch_weather())
-    market_text, market_charts, market_summary, market_signals = get_safe_data(MarketService.fetch_market())
-    banking_text, banking_chart, banking_summary, banking_signals = get_safe_data(BankingService.fetch_banking_rates())
-    stock_text, stock_charts, stock_summary, stock_signals = get_safe_data(StockService.fetch_stock_analysis())
+        weather_text, weather_chart, _, _ = get_safe_data(futures["weather"].result())
+        market_text, market_charts, market_summary, market_signals = get_safe_data(futures["market"].result())
+        banking_text, banking_chart, banking_summary, banking_signals = get_safe_data(futures["banking"].result())
+        stock_text, stock_charts, stock_summary, stock_signals = get_safe_data(futures["stock"].result())
 
-    general_news_entries = NewsService.fetch_news_entries("general")
-    featured_news_entries = NewsService.fetch_news_entries("featured")
-    business_news_entries = NewsService.fetch_news_entries("business")
-    tech_news_entries = NewsService.fetch_news_entries("tech")
-    vn30_impact_entries = NewsService.fetch_vn30_impact_news()
+        general_news_entries = futures["general_news"].result()
+        featured_news_entries = futures["featured_news"].result()
+        business_news_entries = futures["business_news"].result()
+        tech_news_entries = futures["tech_news"].result()
+        vn30_impact_entries = futures["vn30_impact"].result()
+        trends_text, trends_chart, _, _ = get_safe_data(futures["trends"].result())
 
     news_text = format_news_entries(general_news_entries, "Không lấy được tin tức.")
     featured_news = format_news_entries(featured_news_entries, "Không lấy được tin nổi bật.")
@@ -181,7 +196,6 @@ def fetch_report_context() -> ReportContext:
         vn30_impact_entries,
         "Chưa ghi nhận tin rõ ràng có thể ảnh hưởng dài hạn đến VN30 từ feed hiện tại.",
     )
-    trends_text, trends_chart = get_safe_data(NewsService.fetch_trends())
 
     calendar_text = str(LunarService.get_date_info())
     upcoming_holidays = LunarService.get_upcoming_holidays()

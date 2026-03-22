@@ -4,6 +4,8 @@ import urllib3
 from datetime import datetime
 from src.config import Config
 
+REQUEST_TIMEOUT = 15
+
 class BankingService:
     @staticmethod
     def _classify_usd_pressure(buy_transfer):
@@ -37,7 +39,7 @@ class BankingService:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=90)
+            res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
             if res.status_code == 200:
                 return res.json()
             return None
@@ -63,7 +65,7 @@ class BankingService:
                 url = f"https://cafef.vn/du-lieu/ajax/exchangerate/ajaxratecurrency.ashx?time={date_str}"
                 
                 try:
-                    res = requests.get(url, headers=headers, timeout=90)
+                    res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
                     if res.status_code == 200:
                         data = res.json()
                         if data and isinstance(data, list) and len(data) > 0:

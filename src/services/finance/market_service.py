@@ -3,6 +3,8 @@ import urllib3
 import os
 from datetime import datetime
 
+REQUEST_TIMEOUT = 15
+
 class MarketService:
     @staticmethod
     def _classify_breadth(up, down):
@@ -33,7 +35,7 @@ class MarketService:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, verify=False)
             if res.status_code == 200:
                 return res.json()
             return None
@@ -50,7 +52,7 @@ class MarketService:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, verify=False)
             if res.status_code == 200:
                 return res.json()
             return None
@@ -135,7 +137,7 @@ class MarketService:
                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, verify=False)
             if res.status_code == 200:
                 return res.json()
             return None
@@ -152,7 +154,7 @@ class MarketService:
                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                "Referer": "https://cafef.vn/"
             }
-            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, verify=False)
             if res.status_code == 200:
                 data = res.json()
                 if data and data.get('Success'):
@@ -260,7 +262,7 @@ class MarketService:
                   "Sec-Fetch-Site": "same-site"
             }
             
-            res = requests.get(url, headers=headers, timeout=90, verify=False)
+            res = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT, verify=False)
             
             if res.status_code != 200:
                   print(f"Lỗi HTTP: {res.status_code}")

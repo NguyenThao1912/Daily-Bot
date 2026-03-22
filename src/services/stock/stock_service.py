@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 STOCK_CHECK_URL = "https://www.cophieu68.vn/download/_amibroker.php?type=check"
 STOCK_DOWNLOAD_URL = "https://www.cophieu68.vn/download/_amibroker.php?type=all"
+DOWNLOAD_TIMEOUT = 25
 
 class StockService:
     FIELD_ALIASES = {
@@ -206,7 +207,7 @@ class StockService:
     @staticmethod
     def _download_eod_data_sync() -> Optional[bytes]:
         try:
-            response = requests.get(STOCK_DOWNLOAD_URL, timeout=60)
+            response = requests.get(STOCK_DOWNLOAD_URL, timeout=DOWNLOAD_TIMEOUT)
             response.raise_for_status()
             return response.content
         except Exception as e:
