@@ -6,6 +6,29 @@ from src.config import Config
 
 class BankingService:
     @staticmethod
+    def _classify_usd_pressure(buy_transfer):
+        try:
+            usd = float(str(buy_transfer).replace(",", ""))
+        except (TypeError, ValueError):
+            return "unknown"
+
+        if usd >= 25500:
+            return "high"
+        if usd >= 25200:
+            return "elevated"
+        return "stable"
+
+    @staticmethod
+    def _classify_rate_bias(avg_6m, avg_12m):
+        if avg_6m is None and avg_12m is None:
+            return "unknown"
+        if avg_12m is not None and avg_12m >= 5.8:
+            return "tight"
+        if avg_12m is not None and avg_12m <= 5.0:
+            return "supportive"
+        return "neutral"
+
+    @staticmethod
     def _fetch_raw_interest_rates():
         try:
             # CafeF Interest Rates
@@ -114,6 +137,8 @@ class BankingService:
         # Exchange Rates
         rates = BankingService._fetch_raw_exchange_rates()
         ex_text = "N/A"
+        usd_buy_transfer = None
+        eur_buy_transfer = None
         if rates:
             try:
                 # Find VCB row
@@ -123,12 +148,18 @@ class BankingService:
                     eur = next((r for r in rates if r.get('BankCode') == 'VCB' and r.get('CurrencyCode') == 'EUR'), None)
                     
                     ex_text = ""
-                    if usd: ex_text += f"USD/VND (VCB): Mua {usd['BuyTransfer']} - Bán {usd['Sell']}\n"
-                    if eur: ex_text += f"EUR/VND (VCB): Mua {eur['BuyTransfer']} - Bán {eur['Sell']}"
+                    if usd:
+                        usd_buy_transfer = usd.get('BuyTransfer')
+                        ex_text += f"USD/VND (VCB): Mua {usd['BuyTransfer']} - Bán {usd['Sell']}\n"
+                    if eur:
+                        eur_buy_transfer = eur.get('BuyTransfer')
+                        ex_text += f"EUR/VND (VCB): Mua {eur['BuyTransfer']} - Bán {eur['Sell']}"
                 else:
                     # Fallback
                     usd = next((r for r in rates if r.get('CurrencyCode') == 'USD'), None)
-                    if usd: ex_text = f"USD/VND ({usd['BankCode']}): Mua {usd['BuyTransfer']} - Bán {usd['Sell']}"
+                    if usd:
+                        usd_buy_transfer = usd.get('BuyTransfer')
+                        ex_text = f"USD/VND ({usd['BankCode']}): Mua {usd['BuyTransfer']} - Bán {usd['Sell']}"
             except:
                 ex_text = "Lỗi xử lý tỷ giá."
         
@@ -136,6 +167,10 @@ class BankingService:
         rates_data = BankingService._fetch_raw_interest_rates()
         int_text = "N/A"
         chart_path = None
+        avg_6m = None
+        avg_12m = None
+        rate_samples_6m = []
+        rate_samples_12m = []
         
         if rates_data and 'Data' in rates_data:
              chart_data = []
@@ -163,6 +198,10 @@ class BankingService:
                          try: 
                              r12_val = float(r12) if r12 != 'N/A' else 0
                              r6_val = float(r6) if r6 != 'N/A' else 0
+                             if r6_val > 0:
+                                rate_samples_6m.append(r6_val)
+                             if r12_val > 0:
+                                rate_samples_12m.append(r12_val)
                              if r12_val > 0:
                                 chart_data.append((code, r6_val, r12_val))
                          except: pass
@@ -172,6 +211,36 @@ class BankingService:
              except Exception as e:
                  print(f"Rate process error: {e}")
                  int_text = "Lỗi xử lý lãi suất."
+
+        if rate_samples_6m:
+            avg_6m = round(sum(rate_samples_6m) / len(rate_samples_6m), 2)
+        if rate_samples_12m:
+            avg_12m = round(sum(rate_samples_12m) / len(rate_samples_12m), 2)
+
+        usd_pressure = BankingService._classify_usd_pressure(usd_buy_transfer)
+        rate_bias = BankingService._classify_rate_bias(avg_6m, avg_12m)
+        coverage_items = 0
+        if usd_buy_transfer is not None:
+            coverage_items += 1
+        if avg_12m is not None:
+            coverage_items += 1
+        confidence = "high" if coverage_items == 2 else "medium" if coverage_items == 1 else "low"
+
+        summary = {
+            "usd_vnd_buy_transfer": usd_buy_transfer,
+            "eur_vnd_buy_transfer": eur_buy_transfer,
+            "usd_pressure": usd_pressure,
+            "avg_6m": avg_6m,
+            "avg_12m": avg_12m,
+            "rate_bias": rate_bias,
+            "confidence": confidence,
+            "coverage_items": coverage_items,
+        }
+        signals = {
+            "fx_pressure_high": usd_pressure in {"high", "elevated"},
+            "rates_supportive": rate_bias == "supportive",
+            "rates_tight": rate_bias == "tight",
+        }
         
         text = f"--- [TỶ GIÁ & LÃI SUẤT] ---\n{ex_text}\n\nLãi suất 12M các NH lớn:\n{int_text}"
-        return {"text": text, "chart_path": chart_path}
+        return {"text": text, "chart_path": chart_path, "summary": summary, "signals": signals}

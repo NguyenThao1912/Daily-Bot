@@ -12,7 +12,6 @@ from telegram import Bot
 from src.constants import AGENT_LABELS
 from src.config import Config
 from src.orchestrator import Orchestrator, CategoryAgent
-from src.services.finance.crypto_service import CryptoService
 from src.services.finance.market_service import MarketService
 from src.services.finance.banking_service import BankingService
 from src.services.stock.stock_service import StockService
@@ -23,11 +22,89 @@ from src.types import ReportContext, ServicePayload
 
 # --- HELPER FUNCTIONS ---
 
-def get_safe_data(service_res: Any) -> Tuple[str, Any]:
-    """Safely extracts text and chart_path from service response to avoid crashes."""
+def get_safe_data(service_res: Any) -> Tuple[str, Any, Dict[str, Any], Dict[str, Any]]:
+    """Safely extracts text, chart_path and optional metadata from service responses."""
     if isinstance(service_res, dict):
-        return service_res.get("text", "Dữ liệu không khả dụng"), service_res.get("chart_path", None)
-    return str(service_res), None
+        return (
+            service_res.get("text", "Dữ liệu không khả dụng"),
+            service_res.get("chart_path", None),
+            service_res.get("summary", {}) or {},
+            service_res.get("signals", {}) or {},
+        )
+    return str(service_res), None, {}, {}
+
+
+def build_finance_decision_block(
+    stock_summary: Dict[str, Any],
+    stock_signals: Dict[str, Any],
+    market_summary: Dict[str, Any],
+    market_signals: Dict[str, Any],
+    banking_summary: Dict[str, Any],
+    banking_signals: Dict[str, Any],
+) -> str:
+    vn30_conf = stock_summary.get("confidence", "low")
+    market_conf = market_summary.get("confidence", "low")
+    banking_conf = banking_summary.get("confidence", "low")
+
+    confirmed_positive = 0
+    confirmed_negative = 0
+    if stock_signals.get("breadth_positive"):
+        confirmed_positive += 1
+    if market_signals.get("breadth_positive"):
+        confirmed_positive += 1
+    if market_signals.get("prop_buying"):
+        confirmed_positive += 1
+    if stock_signals.get("breadth_negative"):
+        confirmed_negative += 1
+    if market_signals.get("breadth_negative"):
+        confirmed_negative += 1
+    if market_signals.get("prop_selling"):
+        confirmed_negative += 1
+    if banking_signals.get("fx_pressure_high"):
+        confirmed_negative += 1
+
+    market_regime = stock_summary.get("regime", "unknown")
+    if confirmed_positive >= 3 and not banking_signals.get("fx_pressure_high"):
+        action_bias = "uu_tien_theo_doi_co_phieu_manh_va nhom duoc dong tien xac nhan"
+    elif confirmed_negative >= 3:
+        action_bias = "uu_tien_phong_thu_giam_hung_phan_va doi xac nhan moi"
+    else:
+        action_bias = "giu_trang_thai_than_trong_theo_doi_them"
+
+    confidence_levels = [vn30_conf, market_conf, banking_conf]
+    overall_confidence = "high" if confidence_levels.count("high") >= 2 else "medium" if "medium" in confidence_levels or "high" in confidence_levels else "low"
+
+    missing_inputs = []
+    if stock_summary.get("coverage_ratio", 0) < 0.9:
+        missing_inputs.append("VN30 coverage chua day du")
+    if market_summary.get("breadth", {}).get("status") == "unknown":
+        missing_inputs.append("breadth HOSE thieu du lieu")
+    if market_summary.get("prop_trading", {}).get("status") == "unknown":
+        missing_inputs.append("tu doanh thieu du lieu")
+    if banking_summary.get("confidence") == "low":
+        missing_inputs.append("FX/lai suat thieu du lieu")
+
+    conflicting_signals = []
+    if stock_signals.get("breadth_positive") and market_signals.get("breadth_negative"):
+        conflicting_signals.append("VN30 manh nhung breadth HOSE xau")
+    if stock_signals.get("momentum_supportive") and market_signals.get("prop_selling"):
+        conflicting_signals.append("gia va dong luong VN30 on nhung tu doanh dang ban")
+    if confirmed_positive >= 2 and banking_signals.get("fx_pressure_high"):
+        conflicting_signals.append("co tin hieu hoi phuc nhung ap luc USD/VND van cao")
+
+    lines = [
+        "--- [FINANCE DECISION SIGNALS] ---",
+        f"VN30 regime: {market_regime}",
+        f"VN30 breadth: tang {stock_summary.get('advancers', 'N/A')} | giam {stock_summary.get('decliners', 'N/A')} | tren MA20 {stock_summary.get('above_ma20', 'N/A')} | tren MA50 {stock_summary.get('above_ma50', 'N/A')}",
+        f"VN30 quality: confidence={vn30_conf} | avg RSI={stock_summary.get('avg_rsi', 'N/A')} | avg vol ratio={stock_summary.get('avg_volume_ratio', 'N/A')}",
+        f"Market confirmation: breadth={market_summary.get('breadth', {}).get('status', 'unknown')} | prop={market_summary.get('prop_trading', {}).get('status', 'unknown')} | foreign={market_summary.get('foreign_flow', {}).get('status', 'unknown')}",
+        f"Macro filter: usd_pressure={banking_summary.get('usd_pressure', 'unknown')} | rate_bias={banking_summary.get('rate_bias', 'unknown')}",
+        f"Overall confidence: {overall_confidence}",
+        f"Action bias: {action_bias}",
+        "Missing inputs: " + (", ".join(missing_inputs) if missing_inputs else "khong"),
+        "Conflicting signals: " + (", ".join(conflicting_signals) if conflicting_signals else "khong"),
+    ]
+    return "\n".join(lines)
 
 
 def load_base_prompt() -> str | None:
@@ -85,11 +162,10 @@ def register_agents(orchestrator: Orchestrator, base_prompt: str) -> None:
 def fetch_report_context() -> ReportContext:
     print("⏳ Fetching real-time data...")
 
-    weather_text, weather_chart = get_safe_data(WeatherService.fetch_weather())
-    market_text, market_charts = get_safe_data(MarketService.fetch_market())
-    banking_text, banking_chart = get_safe_data(BankingService.fetch_banking_rates())
-    stock_text, stock_charts = get_safe_data(StockService.fetch_stock_analysis())
-    crypto_text = str(CryptoService.fetch_crypto())
+    weather_text, weather_chart, _, _ = get_safe_data(WeatherService.fetch_weather())
+    market_text, market_charts, market_summary, market_signals = get_safe_data(MarketService.fetch_market())
+    banking_text, banking_chart, banking_summary, banking_signals = get_safe_data(BankingService.fetch_banking_rates())
+    stock_text, stock_charts, stock_summary, stock_signals = get_safe_data(StockService.fetch_stock_analysis())
 
     general_news_entries = NewsService.fetch_news_entries("general")
     featured_news_entries = NewsService.fetch_news_entries("featured")
@@ -109,14 +185,22 @@ def fetch_report_context() -> ReportContext:
 
     calendar_text = str(LunarService.get_date_info())
     upcoming_holidays = LunarService.get_upcoming_holidays()
+    finance_decision_text = build_finance_decision_block(
+        stock_summary,
+        stock_signals,
+        market_summary,
+        market_signals,
+        banking_summary,
+        banking_signals,
+    )
 
     data_map = {
         "finance": (
+            f"{finance_decision_text}\n"
             f"--- [MARKET OVERVIEW] ---\n{market_text}\n"
             f"--- [VN30 STOCKS] ---\n{stock_text}\n"
             f"--- [VN30 IMPACT NEWS] ---\n{vn30_impact_news}\n"
             f"--- [BANKING] ---\n{banking_text}\n"
-            f"--- [CRYPTO] ---\n{crypto_text}\n"
             f"--- [MACRO & POLITICS] ---\n{news_text}\n"
             f"--- [BUSINESS NEWS] ---\n{business_news}"
         ),

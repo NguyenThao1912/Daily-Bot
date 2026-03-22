@@ -5,6 +5,26 @@ from datetime import datetime
 
 class MarketService:
     @staticmethod
+    def _classify_breadth(up, down):
+        total = up + down
+        if total <= 0:
+            return "unknown"
+        ratio = up / total
+        if ratio >= 0.55:
+            return "positive"
+        if ratio <= 0.45:
+            return "negative"
+        return "balanced"
+
+    @staticmethod
+    def _classify_net_flow(net_val):
+        if net_val > 0:
+            return "buying"
+        if net_val < 0:
+            return "selling"
+        return "neutral"
+
+    @staticmethod
     def _fetch_cafef_commodities():
         try:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -506,11 +526,21 @@ class MarketService:
     def fetch_market():
         lines = []
         chart_paths = []
+        breadth_summary = {"status": "unknown"}
+        foreign_summary = {"status": "unknown"}
+        prop_summary = {"status": "unknown"}
 
         # 0. Foreign Flow (NEW)
         top_buy, top_sell, raw_buy, raw_sell = MarketService._fetch_cafef_foreign_flow()
         if top_buy or top_sell:
             lines.append("[KHỐI NGOẠI (HOSE)]")
+            foreign_net = sum(val for _, val in top_buy) + sum(val for _, val in top_sell)
+            foreign_summary = {
+                "status": MarketService._classify_net_flow(foreign_net),
+                "net_value": round(foreign_net, 2),
+                "top_buy": [sym for sym, _ in top_buy[:3]],
+                "top_sell": [sym for sym, _ in top_sell[:3]],
+            }
             
             # Generate Foreign Flow Chart
             ff_chart = MarketService._generate_foreign_flow_chart((top_buy, top_sell))
@@ -584,6 +614,13 @@ class MarketService:
                 if total > 0:
                     ratio = (up / total) * 100
                     status = "🟢 Tích cực" if ratio > 55 else "🔴 Tiêu cực" if ratio < 45 else "🟡 Cân bằng"
+                    breadth_summary = {
+                        "status": MarketService._classify_breadth(up, down),
+                        "up": up,
+                        "down": down,
+                        "reference": ref,
+                        "ratio_up": round(ratio, 1),
+                    }
                     lines.append(f"Tăng: {up} (Trần {ceil}) | Giảm: {down} (Sàn {floor}) | TC: {ref}")
                     lines.append(f"Tỷ lệ Tăng: {ratio:.1f}% => {status}")
                 else:
@@ -625,6 +662,12 @@ class MarketService:
              lines.append("\n[TỰ DOANH (HOSE)]")
              net_val = td_total_buy - td_total_sell
              status = "MUA RÒNG" if net_val > 0 else "BÁN RÒNG"
+             prop_summary = {
+                 "status": MarketService._classify_net_flow(net_val),
+                 "net_value": round(net_val, 2),
+                 "top_buy": [sym for sym, _ in td_buy[:3]],
+                 "top_sell": [sym for sym, _ in td_sell[:3]],
+             }
              lines.append(f"Tổng: {status} {abs(net_val):,.0f} tỷ")
              
              if td_buy:
@@ -637,10 +680,24 @@ class MarketService:
                  for sym, val in td_sell:
                      if val < 0: lines.append(f"- {sym}: {val:,.1f}")
         
+        summary = {
+            "breadth": breadth_summary,
+            "foreign_flow": foreign_summary,
+            "prop_trading": prop_summary,
+            "confidence": "high" if breadth_summary.get("status") != "unknown" and prop_summary.get("status") != "unknown" else "medium" if breadth_summary.get("status") != "unknown" or prop_summary.get("status") != "unknown" else "low",
+        }
+        signals = {
+            "breadth_positive": breadth_summary.get("status") == "positive",
+            "breadth_negative": breadth_summary.get("status") == "negative",
+            "prop_buying": prop_summary.get("status") == "buying",
+            "prop_selling": prop_summary.get("status") == "selling",
+            "foreign_buying": foreign_summary.get("status") == "buying",
+            "foreign_selling": foreign_summary.get("status") == "selling",
+        }
+
         return {
             "text": "\n\n[MARKET DATA - CafeF]:\n" + "\n".join(lines),
-            "chart_path": chart_paths # Dict key expects 'chart_path' but we pass a list here. 
-            # Note: get_safe_data in main.py will extract this. 
-            # We'll need to handle list in main.py if get_safe_data expects single.
-            # Actually get_safe_data just gets the value. So list is fine.
+            "chart_path": chart_paths,
+            "summary": summary,
+            "signals": signals,
         }

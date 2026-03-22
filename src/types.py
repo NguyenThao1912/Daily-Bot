@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional, TypedDict
 class ServicePayload(TypedDict, total=False):
     text: str
     chart_path: Optional[str] | List[str]
+    summary: Dict[str, Any]
+    signals: Dict[str, Any]
 
 
 class NewsEntry(TypedDict, total=False):

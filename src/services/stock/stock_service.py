@@ -340,6 +340,12 @@ class StockService:
         return ", ".join(notes[:3]) if notes else "theo doi them"
 
     @staticmethod
+    def _round_metric(value: Optional[float], digits: int = 2) -> Optional[float]:
+        if value is None:
+            return None
+        return round(value, digits)
+
+    @staticmethod
     def _is_short_term_candidate(item: StockSnapshot) -> bool:
         pct_change = item.get("pct_change")
         volume_ratio = item.get("volume_ratio")
@@ -511,6 +517,43 @@ class StockService:
             reverse=True,
         )[:6]
 
+        advancers = sum(1 for item in snapshots if (item.get("pct_change") or 0) > 0)
+        decliners = sum(1 for item in snapshots if (item.get("pct_change") or 0) < 0)
+        above_ma20 = sum(1 for item in snapshots if (item.get("distance_ma20") or -999) >= 0)
+        above_ma50 = sum(1 for item in snapshots if (item.get("distance_ma50") or -999) >= 0)
+        strong_count = sum(1 for item in snapshots if item.get("strength") == "strong")
+        weak_count = sum(1 for item in snapshots if item.get("strength") == "weak")
+        avg_rsi_values = [item["rsi"] for item in snapshots if item.get("rsi") is not None]
+        avg_volume_values = [item["volume_ratio"] for item in snapshots if item.get("volume_ratio") is not None]
+        breadth_ratio = (advancers / len(snapshots)) if snapshots else 0
+        avg_rsi = (sum(avg_rsi_values) / len(avg_rsi_values)) if avg_rsi_values else None
+        avg_volume_ratio = (sum(avg_volume_values) / len(avg_volume_values)) if avg_volume_values else None
+
+        regime = "can_bang"
+        if breadth_ratio >= 0.6 and strong_count >= weak_count + 4:
+            regime = "broad_strength"
+        elif breadth_ratio <= 0.4 and weak_count >= strong_count + 3:
+            regime = "broad_weakness"
+        elif breadth_ratio >= 0.5 and avg_volume_ratio is not None and avg_volume_ratio < 1:
+            regime = "fragile_market"
+        elif strong_count > 0 and weak_count > 0:
+            regime = "selective_rebound"
+
+        coverage = round(len(snapshots) / len(target_symbols), 2) if target_symbols else 0
+        confidence_score = 0.35
+        confidence_score += 0.25 * coverage
+        confidence_score += 0.15 if len(avg_rsi_values) >= 20 else 0
+        confidence_score += 0.15 if len(avg_volume_values) >= 20 else 0
+        confidence_score += 0.10 if len(top_gainers) >= 5 and len(top_losers) >= 5 else 0
+        confidence_score = min(round(confidence_score, 2), 1.0)
+
+        if confidence_score >= 0.8:
+            confidence = "high"
+        elif confidence_score >= 0.6:
+            confidence = "medium"
+        else:
+            confidence = "low"
+
         rows = []
         for item in snapshots:
             close_text = f"{item['close']:.2f}" if item.get("close") is not None else "N/A"
@@ -606,7 +649,34 @@ class StockService:
             lines.append("Ma VN30 khong tim thay trong goi du lieu: " + ", ".join(sorted(set(missing_symbols))))
 
         chart_path = StockService._generate_vn30_chart(snapshots)
+        summary = {
+            "as_of": snapshots[0]["date"],
+            "coverage_ratio": coverage,
+            "advancers": advancers,
+            "decliners": decliners,
+            "above_ma20": above_ma20,
+            "above_ma50": above_ma50,
+            "strong_count": strong_count,
+            "weak_count": weak_count,
+            "avg_rsi": StockService._round_metric(avg_rsi, 1),
+            "avg_volume_ratio": StockService._round_metric(avg_volume_ratio),
+            "regime": regime,
+            "confidence": confidence,
+            "confidence_score": confidence_score,
+            "top_gainers": [item["symbol"] for item in top_gainers],
+            "top_losers": [item["symbol"] for item in top_losers],
+            "top_volume": [item["symbol"] for item in top_volume],
+            "missing_symbols": sorted(set(missing_symbols)),
+        }
+        signals = {
+            "breadth_positive": breadth_ratio >= 0.55,
+            "breadth_negative": breadth_ratio <= 0.45,
+            "momentum_supportive": bool(avg_volume_ratio is not None and avg_volume_ratio >= 1.0 and avg_rsi is not None and avg_rsi >= 50),
+            "market_pressure": bool(avg_rsi is not None and avg_rsi < 45 and weak_count >= strong_count),
+        }
         return {
             "text": "\n".join(lines),
             "chart_path": chart_path,
+            "summary": summary,
+            "signals": signals,
         }
