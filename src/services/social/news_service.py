@@ -20,6 +20,22 @@ class NewsService:
     GOOGLE_NEWS_TOP_URL = "https://news.google.com/rss"
 
     @staticmethod
+    def _sanitize_chart_label(value: str, fallback: str) -> str:
+        cleaned = (value or "").strip()
+        if not cleaned:
+            return fallback
+
+        # DejaVu Sans in CI does not cover Hangul well; strip those glyphs from chart labels
+        # so trend chart rendering stays quiet and deterministic.
+        filtered = "".join(
+            ch for ch in cleaned
+            if not (0x1100 <= ord(ch) <= 0x11FF or 0x3130 <= ord(ch) <= 0x318F or 0xAC00 <= ord(ch) <= 0xD7AF)
+        ).strip()
+        if not filtered:
+            return fallback
+        return filtered
+
+    @staticmethod
     def _fetch_from_worker(path, params=None):
         try:
             url = f"{Config.WORKER_HOST.rstrip('/')}{path}"
@@ -263,8 +279,12 @@ class NewsService:
             # Limit to top 15 for chart
             chart_data = trends_data[:15]
             
-            for t in chart_data: 
-                titles.append(t['title'][:25] + "...") # Slightly longer title
+            for idx, t in enumerate(chart_data, start=1):
+                raw_title = t.get('title', '')
+                safe_title = NewsService._sanitize_chart_label(raw_title, f"Trend {idx}")
+                if len(safe_title) > 25:
+                    safe_title = safe_title[:25] + "..."
+                titles.append(safe_title)
                 # Parse traffic string "20.000+" -> 20000
                 tf_str = t['traffic'].replace('.', '').replace(',', '').replace('+', '')
                 try: traffic.append(int(tf_str))
